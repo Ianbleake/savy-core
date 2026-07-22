@@ -2,6 +2,7 @@ import { NestFactory } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Logger } from "nestjs-pino";
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module.js";
 
 async function bootstrap() {
@@ -31,6 +32,16 @@ async function bootstrap() {
 	});
 
 	app.setGlobalPrefix("api");
+
+	// Swagger
+	const swaggerConfig = new DocumentBuilder()
+		.setTitle("Savy API")
+		.setDescription("Personal finance management API")
+		.setVersion("1.0")
+		.addBearerAuth()
+		.build();
+	const document = SwaggerModule.createDocument(app, swaggerConfig);
+	SwaggerModule.setup("api/docs", app, document);
 
 	const port = configService.get<number>("PORT", 3001);
 	await app.listen(port);
