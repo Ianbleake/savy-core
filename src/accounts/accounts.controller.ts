@@ -1,9 +1,9 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from "@nestjs/swagger";
-import { AccountsService } from "./accounts.service.js";
-import { CurrentUser } from "../auth/current-user.decorator.js";
-import { CreateAccountDto, UpdateAccountDto } from "./dto/account.dto.js";
-import type { User } from "../../generated/prisma/client.js";
+import { AccountsService } from "./accounts.service";
+import { CurrentUser } from "../auth/current-user.decorator";
+import { CreateAccountDto, UpdateAccountDto } from "./dto/account.dto";
+import type { User } from "../generated/prisma/client";
 
 @ApiTags("accounts")
 @ApiBearerAuth()

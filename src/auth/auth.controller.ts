@@ -1,10 +1,10 @@
 import { Controller, Post, Body, Get, Headers } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiHeader } from "@nestjs/swagger";
-import { AuthService } from "./auth.service.js";
-import { Public } from "./public.decorator.js";
-import { CurrentUser } from "./current-user.decorator.js";
-import { LoginDto, RegisterDto, RefreshDto } from "./dto/auth.dto.js";
-import type { User } from "../../generated/prisma/client.js";
+import { AuthService } from "./auth.service";
+import { Public } from "./public.decorator";
+import { CurrentUser } from "./current-user.decorator";
+import { LoginDto, RegisterDto, RefreshDto } from "./dto/auth.dto";
+import type { User } from "../generated/prisma/client";
 
 @ApiTags("auth")
 @Controller("auth")
