@@ -1,10 +1,10 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
-import type { ConfigService } from "@nestjs/config";
+import { ConfigService } from "@nestjs/config";
 import { PassportStrategy } from "@nestjs/passport";
 import { passportJwtSecret } from "jwks-rsa";
 import type { StrategyOptionsWithoutRequest } from "passport-jwt";
 import { ExtractJwt, Strategy } from "passport-jwt";
-import type { ProfilesService } from "../profiles/profiles.service";
+import { ProfilesService } from "../profiles/profiles.service";
 
 interface JwtPayload {
 	sub: string;

@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Headers, Post } from "@nestjs/common";
 import { ApiBearerAuth, ApiHeader, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import type { Profile } from "../generated/prisma/client";
-import type { AuthService } from "./auth.service";
+import { AuthService } from "./auth.service";
 import { CurrentUser } from "./current-user.decorator";
 import {
 	AuthIdentityDto,

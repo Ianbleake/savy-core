@@ -3,7 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagg
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { Profile } from "../generated/prisma/client";
 import { ProfileResponseDto, type UpdateProfileDto } from "./dto/profile.dto";
-import type { ProfilesService } from "./profiles.service";
+import { ProfilesService } from "./profiles.service";
 
 @ApiTags("profiles")
 @ApiBearerAuth()

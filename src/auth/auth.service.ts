@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
-import type { ProfilesService } from "../profiles/profiles.service";
-import type { SupabaseService } from "./supabase.service";
+import { ProfilesService } from "../profiles/profiles.service";
+import { SupabaseService } from "./supabase.service";
 
 export interface AuthTokens {
 	accessToken: string;

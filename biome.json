@@ -22,7 +22,8 @@
 			},
 			"style": {
 				"useSingleVarDeclarator": "error",
-				"noUselessElse": "warn"
+				"noUselessElse": "warn",
+				"useImportType": "off"
 			},
 			"suspicious": {
 				"noVar": "error",

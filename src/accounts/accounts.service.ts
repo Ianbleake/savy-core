@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import type { Account } from "../generated/prisma/client";
-import type { PrismaService } from "../prisma/prisma.service";
+import { PrismaService } from "../prisma/prisma.service";
 import type { CreateAccountDto, UpdateAccountDto } from "./dto/account.dto";
 
 @Injectable()
