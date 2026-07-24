@@ -1,5 +1,5 @@
-import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
+import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from "class-validator";
 
 enum AccountType {
 	BANK = "BANK",
@@ -39,7 +39,11 @@ export class CreateAccountDto {
 }
 
 export class UpdateAccountDto {
-	@ApiProperty({ example: "Checking Account", description: "Account display name", required: false })
+	@ApiProperty({
+		example: "Checking Account",
+		description: "Account display name",
+		required: false,
+	})
 	@IsString()
 	@IsOptional()
 	name?: string;

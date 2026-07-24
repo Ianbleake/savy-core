@@ -17,7 +17,8 @@
 			"correctness": {
 				"useValidForDirection": "error",
 				"noConstAssign": "error",
-				"noUnusedVariables": "error"
+				"noUnusedVariables": "error",
+				"noUnusedFunctionParameters": "off"
 			},
 			"style": {
 				"useSingleVarDeclarator": "error",
@@ -35,6 +36,9 @@
 		}
 	},
 	"javascript": {
+		"parser": {
+			"unsafeParameterDecoratorsEnabled": true
+		},
 		"formatter": {
 			"enabled": true,
 			"lineWidth": 100,

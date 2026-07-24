@@ -66,7 +66,7 @@ src/{domain}/
 |---|---|---|---|
 | PrismaModule | `src/prisma/` | ✓ Complete | Global, exports PrismaService |
 | AuthModule | `src/auth/` | ✓ Complete | Supabase admin client + JWT strategy + guards |
-| UsersModule | `src/users/` | ✓ Complete | User CRUD (mirror of Supabase auth.users) |
+| ProfilesModule | `src/profiles/` | ✓ Complete | Profile CRUD + computed fields (fullName, initials) |
 | AccountsModule | `src/accounts/` | ✓ Complete | Account CRUD with soft delete |
 
 ### Modules to build (planned)
@@ -92,7 +92,12 @@ src/auth/
 ├── jwt.strategy.ts           — passport-jwt with jwks-rsa (ES256)
 ├── jwt-auth.guard.ts         — Global guard with @Public() bypass
 ├── public.decorator.ts       — @Public() marks routes as unauthenticated
-├── current-user.decorator.ts — @CurrentUser() extracts User from request
+├── current-user.decorator.ts — @CurrentUser() extracts Profile from request
+src/profiles/
+├── profiles.module.ts        — Exports ProfilesService
+├── profiles.service.ts       — Profile CRUD + computed fullName/initials
+├── profiles.controller.ts    — GET/PATCH /profiles/me
+├── dto/profile.dto.ts        — UpdateProfileDto
 src/app.module.ts             — Root module, global guard registration
 src/main.ts                   — Bootstrap, CORS, ValidationPipe, Swagger
 ```
@@ -114,9 +119,9 @@ Frontend ──(email/password)──> POST /api/auth/login
                                       │
                             Returns session { access_token, refresh_token }
                                       │
-                            UsersService.findBySupabaseId(sub)
-                                      │ (creates user if first login)
-                            Returns { accessToken, refreshToken, user }
+                            ProfilesService.findByAuthId(sub)
+                                      │ (creates profile if first login)
+                            Returns { accessToken, refreshToken, user: { id, email } }
                                       │
 Frontend <──(tokens)── API <──────────┘
 Frontend stores tokens in localStorage (Zustand persist, key: "auth-storage")
@@ -134,9 +139,9 @@ Frontend ──(Bearer access_token)──> Any /api/* endpoint
                                       │
                             JwtStrategy.validate(payload)
                                       │
-                            UsersService.findBySupabaseId(payload.sub)
+                            ProfilesService.findByAuthId(payload.sub)
                                       │
-                            Attaches User to request.user
+                            Attaches Profile to request.user
                                       │
                             Controller handler runs with @CurrentUser()
 ```
@@ -151,16 +156,23 @@ The `JwtStrategy` uses `jwks-rsa`'s `passportJwtSecret` to dynamically fetch and
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| POST | `/api/auth/register` | @Public | Register new user via Supabase |
+| POST | `/api/auth/register` | @Public | Register new user via Supabase (accepts optional `firstName`, `lastName`) |
 | POST | `/api/auth/login` | @Public | Login with email/password |
 | POST | `/api/auth/refresh` | @Public | Refresh access token |
 | POST | `/api/auth/logout` | Bearer | Sign out (invalidates Supabase session) |
-| GET | `/api/auth/me` | Bearer | Get current user profile |
+| GET | `/api/auth/me` | Bearer | Get current user identity (`{ id, email }` — minimal) |
+
+### Profile endpoints
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/api/profiles/me` | Bearer | Get full profile with computed `fullName` and `initials` |
+| PATCH | `/api/profiles/me` | Bearer | Update profile fields (firstName, lastName, secondLastName, avatarUrl, phone, currency, locale, timezone) |
 
 ### Auth decorators
 
 - `@Public()` — marks a route as public (bypasses global JwtAuthGuard)
-- `@CurrentUser()` — extracts the authenticated `User` from `request.user`
+- `@CurrentUser()` — extracts the authenticated `Profile` from `request.user`
 - `@ApiBearerAuth()` — Swagger decorator to show the "Authorize" button on an endpoint
 
 ### Supabase configuration
@@ -210,7 +222,7 @@ The generated client lives in `src/generated/prisma/`. Import types and classes 
 
 ```typescript
 import { PrismaClient } from "../generated/prisma/client";
-import type { User, Account } from "../generated/prisma/client";
+import type { Profile, Account } from "../generated/prisma/client";
 ```
 
 The import path is **one level up** from domain modules (`../generated/prisma/client`), NOT two levels (`../../generated/prisma/client`). This was a bug we hit — don't repeat it.
@@ -218,12 +230,12 @@ The import path is **one level up** from domain modules (`../generated/prisma/cl
 ### Data model (9 tables)
 
 ```
-User ─┬─ Account ─┬─ Transaction ─ Category
-      │           ├─ CreditCard ─ CardStatement
-      │           └─ Loan
-      ├─ Category
-      ├─ Budget ─── Category
-      └─ SavingsGoal
+Profile ─┬─ Account ─┬─ Transaction ─ Category
+         │           ├─ CreditCard ─ CardStatement
+         │           └─ Loan
+         ├─ Category
+         ├─ Budget ─── Category
+         └─ SavingsGoal
 ```
 
 See `prisma/schema.prisma` for the full schema with all fields, enums, and relations.
@@ -306,7 +318,7 @@ See the Auth Architecture section. The key point: Supabase uses ES256, the JWT s
 ### Services
 
 - Inject `PrismaService` via constructor
-- All queries scope by `userId` from `@CurrentUser()` — never trust client input for ownership
+- All queries scope by `profileId` from `@CurrentUser()` — never trust client input for ownership
 - Soft delete with `isActive: false` instead of hard delete (for Account, Budget)
 - Throw `NotFoundException` when a resource doesn't exist or doesn't belong to the user
 - Return Prisma entities directly (the `ValidationPipe` with `transform` handles serialization)

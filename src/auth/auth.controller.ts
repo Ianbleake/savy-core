@@ -1,10 +1,10 @@
-import { Controller, Post, Body, Get, Headers } from "@nestjs/common";
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiHeader } from "@nestjs/swagger";
-import { AuthService } from "./auth.service";
-import { Public } from "./public.decorator";
+import { Body, Controller, Get, Headers, Post } from "@nestjs/common";
+import { ApiBearerAuth, ApiHeader, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import type { Profile } from "../generated/prisma/client";
+import type { AuthService } from "./auth.service";
 import { CurrentUser } from "./current-user.decorator";
-import { LoginDto, RegisterDto, RefreshDto } from "./dto/auth.dto";
-import type { User } from "../generated/prisma/client";
+import type { LoginDto, RefreshDto, RegisterDto } from "./dto/auth.dto";
+import { Public } from "./public.decorator";
 
 @ApiTags("auth")
 @Controller("auth")
@@ -14,7 +14,10 @@ export class AuthController {
 	@Public()
 	@Post("login")
 	@ApiOperation({ summary: "Login with email and password" })
-	@ApiResponse({ status: 200, description: "Returns access token, refresh token, and user info" })
+	@ApiResponse({
+		status: 200,
+		description: "Returns access token, refresh token, and user identity",
+	})
 	@ApiResponse({ status: 401, description: "Invalid credentials" })
 	async login(@Body() dto: LoginDto) {
 		return this.authService.login(dto.email, dto.password);
@@ -23,10 +26,13 @@ export class AuthController {
 	@Public()
 	@Post("register")
 	@ApiOperation({ summary: "Register a new account" })
-	@ApiResponse({ status: 201, description: "Returns access token, refresh token, and user info" })
+	@ApiResponse({
+		status: 201,
+		description: "Returns access token, refresh token, and user identity",
+	})
 	@ApiResponse({ status: 409, description: "Email already registered" })
 	async register(@Body() dto: RegisterDto) {
-		return this.authService.register(dto.email, dto.password, dto.name);
+		return this.authService.register(dto.email, dto.password, dto.firstName, dto.lastName);
 	}
 
 	@Public()
@@ -51,13 +57,12 @@ export class AuthController {
 
 	@ApiBearerAuth()
 	@Get("me")
-	@ApiOperation({ summary: "Get current authenticated user" })
-	@ApiResponse({ status: 200, description: "Returns user profile" })
-	async me(@CurrentUser() user: User) {
+	@ApiOperation({ summary: "Get current authenticated user identity" })
+	@ApiResponse({ status: 200, description: "Returns user id and email" })
+	async me(@CurrentUser() profile: Profile) {
 		return {
-			id: user.id,
-			email: user.email,
-			name: user.name,
+			id: profile.id,
+			email: profile.email,
 		};
 	}
 }

@@ -1,5 +1,11 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from "@nestjs/common";
-import { Response } from "express";
+import {
+	type ArgumentsHost,
+	Catch,
+	type ExceptionFilter,
+	HttpException,
+	HttpStatus,
+} from "@nestjs/common";
+import type { Response } from "express";
 
 /**
  * Global exception filter — wraps ALL errors in the standard envelope.

@@ -1,10 +1,10 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
+import type { ConfigService } from "@nestjs/config";
 import { PassportStrategy } from "@nestjs/passport";
-import { ExtractJwt, Strategy } from "passport-jwt";
-import type { StrategyOptionsWithoutRequest } from "passport-jwt";
 import { passportJwtSecret } from "jwks-rsa";
-import { UsersService } from "../users/users.service";
+import type { StrategyOptionsWithoutRequest } from "passport-jwt";
+import { ExtractJwt, Strategy } from "passport-jwt";
+import type { ProfilesService } from "../profiles/profiles.service";
 
 interface JwtPayload {
 	sub: string;
@@ -17,7 +17,7 @@ interface JwtPayload {
 export class JwtStrategy extends PassportStrategy(Strategy) {
 	constructor(
 		configService: ConfigService,
-		private readonly usersService: UsersService,
+		private readonly profilesService: ProfilesService,
 	) {
 		const supabaseUrl = configService.get<string>("SUPABASE_URL")!;
 
@@ -36,10 +36,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 	}
 
 	async validate(payload: JwtPayload) {
-		const user = await this.usersService.findBySupabaseId(payload.sub);
-		if (!user) {
-			throw new UnauthorizedException("User not found");
+		const profile = await this.profilesService.findByAuthId(payload.sub);
+		if (!profile) {
+			throw new UnauthorizedException("Profile not found");
 		}
-		return user;
+		return profile;
 	}
 }

@@ -1,6 +1,6 @@
-import { Injectable, UnauthorizedException, ConflictException } from "@nestjs/common";
-import { SupabaseService } from "./supabase.service";
-import { UsersService } from "../users/users.service";
+import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
+import type { ProfilesService } from "../profiles/profiles.service";
+import type { SupabaseService } from "./supabase.service";
 
 export interface AuthTokens {
 	accessToken: string;
@@ -13,7 +13,6 @@ export interface AuthResponse {
 	user: {
 		id: string;
 		email: string;
-		name: string | null;
 	};
 }
 
@@ -21,7 +20,7 @@ export interface AuthResponse {
 export class AuthService {
 	constructor(
 		private readonly supabaseService: SupabaseService,
-		private readonly usersService: UsersService,
+		private readonly profilesService: ProfilesService,
 	) {}
 
 	async login(email: string, password: string): Promise<AuthResponse> {
@@ -31,12 +30,13 @@ export class AuthService {
 			throw new UnauthorizedException("Invalid credentials");
 		}
 
-		let user = await this.usersService.findBySupabaseId(data.user.id);
-		if (!user) {
-			user = await this.usersService.create({
-				supabaseId: data.user.id,
+		let profile = await this.profilesService.findByAuthId(data.user.id);
+		if (!profile) {
+			profile = await this.profilesService.create({
+				authId: data.user.id,
 				email: data.user.email!,
-				name: data.user.user_metadata?.name ?? null,
+				firstName: data.user.user_metadata?.first_name ?? data.user.user_metadata?.name ?? null,
+				lastName: data.user.user_metadata?.last_name ?? null,
 			});
 		}
 
@@ -44,14 +44,18 @@ export class AuthService {
 			accessToken: data.session.access_token,
 			refreshToken: data.session.refresh_token!,
 			user: {
-				id: user.id,
-				email: user.email,
-				name: user.name,
+				id: profile.id,
+				email: profile.email,
 			},
 		};
 	}
 
-	async register(email: string, password: string, name: string): Promise<AuthResponse> {
+	async register(
+		email: string,
+		password: string,
+		firstName?: string,
+		lastName?: string,
+	): Promise<AuthResponse> {
 		const { data, error } = await this.supabaseService.signUp(email, password);
 
 		if (error) {
@@ -65,19 +69,19 @@ export class AuthService {
 			throw new UnauthorizedException("Registration failed");
 		}
 
-		const user = await this.usersService.create({
-			supabaseId: data.user.id,
+		const profile = await this.profilesService.create({
+			authId: data.user.id,
 			email: data.user.email!,
-			name,
+			firstName: firstName ?? null,
+			lastName: lastName ?? null,
 		});
 
 		return {
 			accessToken: data.session.access_token,
 			refreshToken: data.session.refresh_token!,
 			user: {
-				id: user.id,
-				email: user.email,
-				name: user.name,
+				id: profile.id,
+				email: profile.email,
 			},
 		};
 	}
