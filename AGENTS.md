@@ -159,6 +159,8 @@ The `JwtStrategy` uses `jwks-rsa`'s `passportJwtSecret` to dynamically fetch and
 | POST | `/api/auth/register` | @Public | Register new user via Supabase (accepts optional `firstName`, `lastName`) |
 | POST | `/api/auth/login` | @Public | Login with email/password |
 | POST | `/api/auth/refresh` | @Public | Refresh access token |
+| POST | `/api/auth/forgot-password` | @Public | Send password reset email (never reveals if email exists) |
+| POST | `/api/auth/reset-password` | @Public | Update password using tokens from reset email link |
 | POST | `/api/auth/logout` | Bearer | Sign out (invalidates Supabase session) |
 | GET | `/api/auth/me` | Bearer | Get current user identity (`{ id, email }` — minimal) |
 
