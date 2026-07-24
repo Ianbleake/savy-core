@@ -396,7 +396,7 @@ bun run test:e2e           # Jest e2e tests
 | `DATABASE_URL` | Transaction pooler (runtime) | `postgresql://...:6543/postgres?pgbouncer=true` |
 | `DIRECT_URL` | Session pooler (migrations) | `postgresql://...:5432/postgres` |
 | `PORT` | Server port | `3001` |
-| `CORS_ORIGIN` | Allowed origin for CORS | `http://localhost:3000` |
+| `CORS_ORIGIN` | Allowed origins for CORS (comma-separated) | `http://localhost:3000,https://savy-web.bleakedev.workers.dev` |
 
 All variables are in `.env` (gitignored). Use `.env.example` as a template.
 
