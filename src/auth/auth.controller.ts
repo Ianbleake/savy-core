@@ -7,10 +7,13 @@ import {
 	AuthIdentityDto,
 	AuthResponseDto,
 	AuthTokensDto,
+	ForgotPasswordDto,
 	LoginDto,
 	LogoutResponseDto,
+	MessageResponseDto,
 	RefreshDto,
 	RegisterDto,
+	ResetPasswordDto,
 } from "./dto/auth.dto";
 import { Public } from "./public.decorator";
 
@@ -67,6 +70,33 @@ export class AuthController {
 		const token = auth?.replace("Bearer ", "");
 		await this.authService.logout(token);
 		return { message: "Logged out" };
+	}
+
+	@Public()
+	@Post("forgot-password")
+	@ApiOperation({ summary: "Request a password reset email" })
+	@ApiResponse({
+		status: 201,
+		description: "Reset link sent if email is registered",
+		type: MessageResponseDto,
+	})
+	async forgotPassword(@Body() dto: ForgotPasswordDto) {
+		await this.authService.forgotPassword(dto.email);
+		return { message: "If the email is registered, a reset link has been sent" };
+	}
+
+	@Public()
+	@Post("reset-password")
+	@ApiOperation({ summary: "Reset password using tokens from the email link" })
+	@ApiResponse({
+		status: 201,
+		description: "Password updated successfully",
+		type: MessageResponseDto,
+	})
+	@ApiResponse({ status: 401, description: "Invalid or expired reset token" })
+	async resetPassword(@Body() dto: ResetPasswordDto) {
+		await this.authService.resetPassword(dto.accessToken, dto.refreshToken, dto.newPassword);
+		return { message: "Password updated successfully" };
 	}
 
 	@ApiBearerAuth()

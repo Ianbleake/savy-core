@@ -39,4 +39,27 @@ export class SupabaseService {
 	async signOut(accessToken: string) {
 		return this.client.auth.admin.signOut(accessToken);
 	}
+
+	async resetPasswordForEmail(email: string, redirectTo: string) {
+		return this.client.auth.resetPasswordForEmail(email, { redirectTo });
+	}
+
+	async setSession(accessToken: string, refreshToken: string) {
+		return this.client.auth.setSession({
+			access_token: accessToken,
+			refresh_token: refreshToken,
+		});
+	}
+
+	async updateUser(accessToken: string, attributes: { password: string }) {
+		// Use admin API to update user by first getting user from token
+		const {
+			data: { user },
+			error: sessionError,
+		} = await this.client.auth.getUser(accessToken);
+		if (sessionError || !user) {
+			return { data: { user: null }, error: sessionError };
+		}
+		return this.client.auth.admin.updateUserById(user.id, attributes);
+	}
 }

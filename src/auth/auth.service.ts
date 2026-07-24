@@ -102,4 +102,33 @@ export class AuthService {
 	async logout(accessToken: string): Promise<void> {
 		await this.supabaseService.signOut(accessToken);
 	}
+
+	async forgotPassword(email: string): Promise<void> {
+		const redirectTo = "https://savy-web.bleakedev.workers.dev/auth/reset-password";
+		await this.supabaseService.resetPasswordForEmail(email, redirectTo);
+		// Always succeed — never reveal if the email exists
+	}
+
+	async resetPassword(
+		accessToken: string,
+		refreshToken: string,
+		newPassword: string,
+	): Promise<void> {
+		// Establish session from the tokens Supabase sent via redirect
+		const { error: sessionError } = await this.supabaseService.setSession(
+			accessToken,
+			refreshToken,
+		);
+		if (sessionError) {
+			throw new UnauthorizedException("Invalid or expired reset token");
+		}
+
+		// Update the password
+		const { error: updateError } = await this.supabaseService.updateUser(accessToken, {
+			password: newPassword,
+		});
+		if (updateError) {
+			throw new UnauthorizedException(updateError.message);
+		}
+	}
 }

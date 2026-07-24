@@ -35,6 +35,14 @@ export class LogoutResponseDto {
 	message!: string;
 }
 
+export class MessageResponseDto {
+	@ApiProperty({
+		example: "If the email is registered, a reset link has been sent",
+		description: "Operation result message",
+	})
+	message!: string;
+}
+
 // ─── Request DTOs ────────────────────────────────────────────────────
 
 export class LoginDto {
@@ -74,4 +82,31 @@ export class RefreshDto {
 	@IsString()
 	@IsNotEmpty()
 	refreshToken!: string;
+}
+
+export class ForgotPasswordDto {
+	@ApiProperty({ example: "user@example.com", description: "Email address to send reset link to" })
+	@IsEmail()
+	email!: string;
+}
+
+export class ResetPasswordDto {
+	@ApiProperty({ description: "Access token from Supabase redirect URL" })
+	@IsString()
+	@IsNotEmpty()
+	accessToken!: string;
+
+	@ApiProperty({ description: "Refresh token from Supabase redirect URL" })
+	@IsString()
+	@IsNotEmpty()
+	refreshToken!: string;
+
+	@ApiProperty({
+		example: "newSecurePass123",
+		description: "New password (min 6 chars)",
+		minLength: 6,
+	})
+	@IsString()
+	@MinLength(6)
+	newPassword!: string;
 }
