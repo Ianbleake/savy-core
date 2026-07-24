@@ -3,7 +3,15 @@ import { ApiBearerAuth, ApiHeader, ApiOperation, ApiResponse, ApiTags } from "@n
 import type { Profile } from "../generated/prisma/client";
 import type { AuthService } from "./auth.service";
 import { CurrentUser } from "./current-user.decorator";
-import type { LoginDto, RefreshDto, RegisterDto } from "./dto/auth.dto";
+import {
+	AuthIdentityDto,
+	AuthResponseDto,
+	AuthTokensDto,
+	type LoginDto,
+	LogoutResponseDto,
+	type RefreshDto,
+	type RegisterDto,
+} from "./dto/auth.dto";
 import { Public } from "./public.decorator";
 
 @ApiTags("auth")
@@ -17,6 +25,7 @@ export class AuthController {
 	@ApiResponse({
 		status: 200,
 		description: "Returns access token, refresh token, and user identity",
+		type: AuthResponseDto,
 	})
 	@ApiResponse({ status: 401, description: "Invalid credentials" })
 	async login(@Body() dto: LoginDto) {
@@ -29,6 +38,7 @@ export class AuthController {
 	@ApiResponse({
 		status: 201,
 		description: "Returns access token, refresh token, and user identity",
+		type: AuthResponseDto,
 	})
 	@ApiResponse({ status: 409, description: "Email already registered" })
 	async register(@Body() dto: RegisterDto) {
@@ -38,7 +48,11 @@ export class AuthController {
 	@Public()
 	@Post("refresh")
 	@ApiOperation({ summary: "Refresh access token" })
-	@ApiResponse({ status: 200, description: "Returns new access and refresh tokens" })
+	@ApiResponse({
+		status: 200,
+		description: "Returns new access and refresh tokens",
+		type: AuthTokensDto,
+	})
 	@ApiResponse({ status: 401, description: "Invalid refresh token" })
 	async refresh(@Body() dto: RefreshDto) {
 		return this.authService.refresh(dto.refreshToken);
@@ -48,7 +62,7 @@ export class AuthController {
 	@ApiHeader({ name: "Authorization", description: "Bearer JWT token" })
 	@Post("logout")
 	@ApiOperation({ summary: "Logout and invalidate session" })
-	@ApiResponse({ status: 201, description: "Logged out successfully" })
+	@ApiResponse({ status: 201, description: "Logged out successfully", type: LogoutResponseDto })
 	async logout(@Headers("authorization") auth: string) {
 		const token = auth?.replace("Bearer ", "");
 		await this.authService.logout(token);
@@ -58,7 +72,7 @@ export class AuthController {
 	@ApiBearerAuth()
 	@Get("me")
 	@ApiOperation({ summary: "Get current authenticated user identity" })
-	@ApiResponse({ status: 200, description: "Returns user id and email" })
+	@ApiResponse({ status: 200, description: "Returns user id and email", type: AuthIdentityDto })
 	async me(@CurrentUser() profile: Profile) {
 		return {
 			id: profile.id,
