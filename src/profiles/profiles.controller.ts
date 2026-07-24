@@ -2,7 +2,7 @@ import { Body, Controller, Get, Patch } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { Profile } from "../generated/prisma/client";
-import { ProfileResponseDto, type UpdateProfileDto } from "./dto/profile.dto";
+import { ProfileResponseDto, UpdateProfileDto } from "./dto/profile.dto";
 import { ProfilesService } from "./profiles.service";
 
 @ApiTags("profiles")

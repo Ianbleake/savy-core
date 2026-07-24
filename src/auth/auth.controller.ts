@@ -7,10 +7,10 @@ import {
 	AuthIdentityDto,
 	AuthResponseDto,
 	AuthTokensDto,
-	type LoginDto,
+	LoginDto,
 	LogoutResponseDto,
-	type RefreshDto,
-	type RegisterDto,
+	RefreshDto,
+	RegisterDto,
 } from "./dto/auth.dto";
 import { Public } from "./public.decorator";
 
