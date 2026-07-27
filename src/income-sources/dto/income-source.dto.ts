@@ -10,7 +10,6 @@ import {
 	IsNumber,
 	IsOptional,
 	IsString,
-	Max,
 	MaxLength,
 	Min,
 } from "class-validator";
@@ -43,14 +42,14 @@ export class CreateIncomeSourceDto {
 	frequency!: IncomeFrequency;
 
 	@ApiProperty({
-		example: 15,
-		description: "Day of payment (1-31 for MONTHLY/BIWEEKLY, 1-7 for WEEKLY)",
+		example: [15],
+		description: "Payment days. WEEKLY: 1 weekday (1-7). BIWEEKLY: 2 days of month (1-31). MONTHLY: 1 day of month (1-31).",
 	})
-	@Type(() => Number)
-	@IsInt()
-	@Min(1)
-	@Max(31)
-	payday!: number;
+	@IsArray()
+	@ArrayMinSize(1)
+	@ArrayMaxSize(2)
+	@IsInt({ each: true })
+	paydays!: number[];
 }
 
 export class UpdateIncomeSourceDto {
@@ -78,15 +77,15 @@ export class UpdateIncomeSourceDto {
 	frequency?: IncomeFrequency;
 
 	@ApiPropertyOptional({
-		example: 15,
-		description: "Day of payment (1-31 for MONTHLY/BIWEEKLY, 1-7 for WEEKLY)",
+		example: [15],
+		description: "Payment days. WEEKLY: 1 weekday (1-7). BIWEEKLY: 2 days of month (1-31). MONTHLY: 1 day of month (1-31).",
 	})
 	@IsOptional()
-	@Type(() => Number)
-	@IsInt()
-	@Min(1)
-	@Max(31)
-	payday?: number;
+	@IsArray()
+	@ArrayMinSize(1)
+	@ArrayMaxSize(2)
+	@IsInt({ each: true })
+	paydays?: number[];
 }
 
 export class IncomeSourceResponseDto {
@@ -106,10 +105,10 @@ export class IncomeSourceResponseDto {
 	frequency!: IncomeFrequency;
 
 	@ApiProperty({
-		example: 15,
-		description: "Day of payment (1-31 for MONTHLY/BIWEEKLY, 1-7 for WEEKLY)",
+		example: [15],
+		description: "Payment days. WEEKLY: 1 weekday (1-7). BIWEEKLY: 2 days of month (1-31). MONTHLY: 1 day of month (1-31).",
 	})
-	payday!: number;
+	paydays!: number[];
 
 	@ApiProperty({ example: true, description: "Whether the income source is active" })
 	isActive!: boolean;
@@ -127,8 +126,8 @@ export class BulkCreateIncomeSourcesDto {
 	@ApiProperty({
 		type: [CreateIncomeSourceDto],
 		example: [
-			{ name: "Trabajo principal", amount: 25000, frequency: "MONTHLY", payday: 15 },
-			{ name: "Freelance", amount: 5000, frequency: "WEEKLY", payday: 5 },
+			{ name: "Trabajo principal", amount: 25000, frequency: "MONTHLY", paydays: [15] },
+			{ name: "Freelance", amount: 5000, frequency: "WEEKLY", paydays: [5] },
 		],
 		description: "Array of income sources to create (1-10 items)",
 	})
@@ -140,7 +139,7 @@ export class BulkCreateIncomeSourcesDto {
 
 export class FailedIncomeSourceDto {
 	@ApiProperty({
-		example: { name: "Trabajo principal", amount: -100, frequency: "MONTHLY", payday: 15 },
+		example: { name: "Trabajo principal", amount: -100, frequency: "MONTHLY", paydays: [15] },
 		description: "The original input that failed validation",
 	})
 	input!: Record<string, unknown>;
