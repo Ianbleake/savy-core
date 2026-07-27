@@ -1,6 +1,9 @@
 import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
+	ArrayMaxSize,
+	ArrayMinSize,
+	IsArray,
 	IsEnum,
 	IsInt,
 	IsNotEmpty,
@@ -116,4 +119,56 @@ export class IncomeSourceResponseDto {
 
 	@ApiProperty({ example: "2026-07-27T05:14:40.000Z", description: "Last update date" })
 	updatedAt!: Date;
+}
+
+// ─── Bulk Create DTO ─────────────────────────────────────────────────
+
+export class BulkCreateIncomeSourcesDto {
+	@ApiProperty({
+		type: [CreateIncomeSourceDto],
+		example: [
+			{ name: "Trabajo principal", amount: 25000, frequency: "MONTHLY", payday: 15 },
+			{ name: "Freelance", amount: 5000, frequency: "WEEKLY", payday: 5 },
+		],
+		description: "Array of income sources to create (1-10 items)",
+	})
+	@IsArray()
+	@ArrayMinSize(1)
+	@ArrayMaxSize(10)
+	sources!: CreateIncomeSourceDto[];
+}
+
+export class FailedIncomeSourceDto {
+	@ApiProperty({
+		example: { name: "Trabajo principal", amount: -100, frequency: "MONTHLY", payday: 15 },
+		description: "The original input that failed validation",
+	})
+	input!: Record<string, unknown>;
+
+	@ApiProperty({
+		example: ["amount must not be less than 0"],
+		description: "Validation error messages for this item",
+		type: [String],
+	})
+	errors!: string[];
+}
+
+export class BulkCreateResponseDto {
+	@ApiProperty({ enum: ["success", "partial", "failed"], example: "partial" })
+	creationState!: "success" | "partial" | "failed";
+
+	@ApiProperty({ example: 1, description: "Total number of items received" })
+	total!: number;
+
+	@ApiProperty({
+		type: [IncomeSourceResponseDto],
+		description: "Successfully created income sources",
+	})
+	successful!: IncomeSourceResponseDto[];
+
+	@ApiProperty({
+		type: [FailedIncomeSourceDto],
+		description: "Items that failed validation",
+	})
+	failed!: FailedIncomeSourceDto[];
 }

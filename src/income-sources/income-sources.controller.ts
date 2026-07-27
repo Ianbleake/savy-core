@@ -2,7 +2,13 @@ import { Body, Controller, Delete, Get, Param, Patch, Post } from "@nestjs/commo
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { Profile } from "../generated/prisma/client";
-import { CreateIncomeSourceDto, IncomeSourceResponseDto, UpdateIncomeSourceDto } from "./dto/income-source.dto";
+import {
+	BulkCreateIncomeSourcesDto,
+	BulkCreateResponseDto,
+	CreateIncomeSourceDto,
+	IncomeSourceResponseDto,
+	UpdateIncomeSourceDto,
+} from "./dto/income-source.dto";
 import { IncomeSourcesService } from "./income-sources.service";
 
 @ApiTags("income-sources")
@@ -31,6 +37,17 @@ export class IncomeSourcesController {
 	@ApiResponse({ status: 201, description: "Returns the created income source", type: IncomeSourceResponseDto })
 	async create(@CurrentUser() profile: Profile, @Body() dto: CreateIncomeSourceDto) {
 		return this.incomeSourcesService.create(profile.id, dto);
+	}
+
+	@Post("bulk")
+	@ApiOperation({ summary: "Create multiple income sources (per-item validation, partial success allowed)" })
+	@ApiResponse({
+		status: 201,
+		description: "Returns successful items, failed items with errors, total count, and creationState",
+		type: BulkCreateResponseDto,
+	})
+	async bulkCreate(@CurrentUser() profile: Profile, @Body() dto: BulkCreateIncomeSourcesDto) {
+		return this.incomeSourcesService.bulkCreate(profile.id, dto);
 	}
 
 	@Patch(":id")

@@ -1,7 +1,21 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
+import { plainToInstance } from "class-transformer";
+import { validate } from "class-validator";
 import type { IncomeSource } from "../generated/prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
-import { CreateIncomeSourceDto, UpdateIncomeSourceDto } from "./dto/income-source.dto";
+import {
+	BulkCreateIncomeSourcesDto,
+	CreateIncomeSourceDto,
+	FailedIncomeSourceDto,
+	UpdateIncomeSourceDto,
+} from "./dto/income-source.dto";
+
+export interface BulkCreateResult {
+	creationState: "success" | "partial" | "failed";
+	total: number;
+	successful: IncomeSource[];
+	failed: FailedIncomeSourceDto[];
+}
 
 @Injectable()
 export class IncomeSourcesService {
@@ -50,5 +64,51 @@ export class IncomeSourcesService {
 			where: { id },
 			data: { isActive: false },
 		});
+	}
+
+	async bulkCreate(profileId: string, dto: BulkCreateIncomeSourcesDto): Promise<BulkCreateResult> {
+		const successful: IncomeSource[] = [];
+		const failed: FailedIncomeSourceDto[] = [];
+
+		for (const raw of dto.sources) {
+			const instance = plainToInstance(CreateIncomeSourceDto, raw);
+			const errors = await validate(instance, { whitelist: true, forbidNonWhitelisted: true });
+
+			if (errors.length > 0) {
+				failed.push({
+					input: raw as unknown as Record<string, unknown>,
+					errors: errors.flatMap((e) => Object.values(e.constraints ?? {})),
+				});
+				continue;
+			}
+
+			try {
+				const created = await this.prisma.incomeSource.create({
+					data: {
+						profileId,
+						name: instance.name,
+						amount: instance.amount,
+						frequency: instance.frequency,
+						payday: instance.payday,
+					},
+				});
+				successful.push(created);
+			} catch (error) {
+				failed.push({
+					input: raw as unknown as Record<string, unknown>,
+					errors: [(error as Error).message],
+				});
+			}
+		}
+
+		const total = dto.sources.length;
+		const creationState: BulkCreateResult["creationState"] =
+			successful.length === total
+				? "success"
+				: successful.length === 0
+					? "failed"
+					: "partial";
+
+		return { creationState, total, successful, failed };
 	}
 }
