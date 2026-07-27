@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import type { Profile } from "../generated/prisma/client";
+import type { IncomeFrequency, Profile } from "../generated/prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 
 interface CreateProfileData {
@@ -18,8 +18,6 @@ interface UpdateProfileData {
 	currency?: string;
 	locale?: string;
 	timezone?: string;
-	monthlyIncome?: number | null;
-	paydayOfMonth?: number | null;
 }
 
 export interface ProfileWithComputed {
@@ -37,8 +35,7 @@ export interface ProfileWithComputed {
 	locale: string;
 	timezone: string;
 	onboardingCompleted: boolean;
-	monthlyIncome: number | null;
-	paydayOfMonth: number | null;
+	estimatedMonthlyIncome: number | null;
 	createdAt: Date;
 	updatedAt: Date;
 }
@@ -49,9 +46,13 @@ const ONBOARDING_REQUIRED_FIELDS = [
 	"currency",
 	"locale",
 	"timezone",
-	"monthlyIncome",
-	"paydayOfMonth",
 ] as const;
+
+const FREQUENCY_MULTIPLIER: Record<IncomeFrequency, number> = {
+	WEEKLY: 4.33,
+	BIWEEKLY: 2,
+	MONTHLY: 1,
+};
 
 @Injectable()
 export class ProfilesService {
@@ -92,7 +93,8 @@ export class ProfilesService {
 		});
 	}
 
-	withComputed(profile: Profile): ProfileWithComputed {
+	async withComputed(profile: Profile): Promise<ProfileWithComputed> {
+		const estimatedMonthlyIncome = await this.computeEstimatedMonthlyIncome(profile.id);
 		return {
 			id: profile.id,
 			authId: profile.authId,
@@ -108,8 +110,7 @@ export class ProfilesService {
 			locale: profile.locale,
 			timezone: profile.timezone,
 			onboardingCompleted: profile.onboardingCompleted,
-			monthlyIncome: profile.monthlyIncome ? Number(profile.monthlyIncome) : null,
-			paydayOfMonth: profile.paydayOfMonth,
+			estimatedMonthlyIncome,
 			createdAt: profile.createdAt,
 			updatedAt: profile.updatedAt,
 		};
@@ -127,7 +128,24 @@ export class ProfilesService {
 		return [first, last].filter(Boolean).join("");
 	}
 
-	validateOnboarding(profile: Profile): { valid: boolean; missingFields: string[] } {
+	private async computeEstimatedMonthlyIncome(profileId: string): Promise<number | null> {
+		const sources = await this.prisma.incomeSource.findMany({
+			where: { profileId, isActive: true },
+			select: { amount: true, frequency: true },
+		});
+
+		if (sources.length === 0) return null;
+
+		const total = sources.reduce(
+			(sum, s) => sum + Number(s.amount) * FREQUENCY_MULTIPLIER[s.frequency],
+			0,
+		);
+		return Math.round(total * 100) / 100;
+	}
+
+	async validateOnboarding(
+		profile: Profile,
+	): Promise<{ valid: boolean; missingFields: string[] }> {
 		const missingFields: string[] = [];
 
 		for (const field of ONBOARDING_REQUIRED_FIELDS) {
@@ -135,6 +153,13 @@ export class ProfilesService {
 			if (value === null || value === undefined || value === "") {
 				missingFields.push(field);
 			}
+		}
+
+		const activeSources = await this.prisma.incomeSource.count({
+			where: { profileId: profile.id, isActive: true },
+		});
+		if (activeSources === 0) {
+			missingFields.push("incomeSources");
 		}
 
 		return {
@@ -149,7 +174,7 @@ export class ProfilesService {
 			throw new NotFoundException("Profile not found");
 		}
 
-		const { valid, missingFields } = this.validateOnboarding(profile);
+		const { valid, missingFields } = await this.validateOnboarding(profile);
 		if (!valid) {
 			throw new BadRequestException({
 				message: "Onboarding requirements not met",

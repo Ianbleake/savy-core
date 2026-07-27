@@ -19,7 +19,7 @@ export class ProfilesController {
 		type: ProfileResponseDto,
 	})
 	async getMyProfile(@CurrentUser() profile: Profile) {
-		return this.profilesService.withComputed(profile);
+		return await this.profilesService.withComputed(profile);
 	}
 
 	@Patch("me")

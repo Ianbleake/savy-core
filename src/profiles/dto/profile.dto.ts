@@ -1,6 +1,5 @@
-import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
+import { IsOptional, IsString, MaxLength } from "class-validator";
 
 // ─── Response DTO ────────────────────────────────────────────────────
 
@@ -52,15 +51,9 @@ export class ProfileResponseDto {
 
 	@ApiPropertyOptional({
 		example: 25000,
-		description: "Estimated monthly income",
+		description: "Estimated monthly income, computed from active income sources",
 	})
-	monthlyIncome!: number | null;
-
-	@ApiPropertyOptional({
-		example: 15,
-		description: "Day of the month the user gets paid (1-31)",
-	})
-	paydayOfMonth!: number | null;
+	estimatedMonthlyIncome!: number | null;
 
 	@ApiProperty({ example: "2026-01-15T10:30:00.000Z", description: "Profile creation date" })
 	createdAt!: Date;
@@ -117,27 +110,6 @@ export class UpdateProfileDto {
 	@IsString()
 	@MaxLength(50)
 	timezone?: string;
-
-	@ApiPropertyOptional({
-		example: 25000,
-		description: "Estimated monthly income",
-	})
-	@IsOptional()
-	@Type(() => Number)
-	@IsNumber()
-	@Min(0)
-	monthlyIncome?: number | null;
-
-	@ApiPropertyOptional({
-		example: 15,
-		description: "Day of the month the user gets paid (1-31)",
-	})
-	@IsOptional()
-	@Type(() => Number)
-	@IsInt()
-	@Min(1)
-	@Max(31)
-	paydayOfMonth?: number | null;
 }
 
 // ─── Onboarding Validation DTO ──────────────────────────────────────
@@ -150,7 +122,7 @@ export class OnboardingValidationResponseDto {
 	valid!: boolean;
 
 	@ApiProperty({
-		example: ["firstName", "monthlyIncome"],
+		example: ["firstName", "incomeSources"],
 		description: "List of required fields that are missing or invalid",
 		type: [String],
 	})
