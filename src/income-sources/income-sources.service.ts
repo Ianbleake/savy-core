@@ -110,7 +110,7 @@ export class IncomeSourcesService {
 
 			if (allErrors.length > 0) {
 				failed.push({
-					input: raw as unknown as Record<string, unknown>,
+					input: raw,
 					errors: allErrors,
 				});
 				continue;
@@ -129,7 +129,7 @@ export class IncomeSourcesService {
 				successful.push(created);
 			} catch (error) {
 				failed.push({
-					input: raw as unknown as Record<string, unknown>,
+					input: raw,
 					errors: [(error as Error).message],
 				});
 			}

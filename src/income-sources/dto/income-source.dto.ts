@@ -134,7 +134,7 @@ export class BulkCreateIncomeSourcesDto {
 	@IsArray()
 	@ArrayMinSize(1)
 	@ArrayMaxSize(10)
-	sources!: CreateIncomeSourceDto[];
+	sources!: Record<string, unknown>[];
 }
 
 export class FailedIncomeSourceDto {
