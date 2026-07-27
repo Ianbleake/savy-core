@@ -7,6 +7,7 @@ import { AuthModule } from "./auth/auth.module";
 import { JwtAuthGuard } from "./auth/jwt-auth.guard";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
 import { ResponseInterceptor } from "./common/interceptors/response.interceptor";
+import { IncomeSourcesModule } from "./income-sources/income-sources.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { ProfilesModule } from "./profiles/profiles.module";
 
@@ -27,6 +28,7 @@ import { ProfilesModule } from "./profiles/profiles.module";
 		AuthModule,
 		ProfilesModule,
 		AccountsModule,
+		IncomeSourcesModule,
 	],
 	providers: [
 		{
