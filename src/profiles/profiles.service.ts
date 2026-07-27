@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Profile } from "../generated/prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -18,6 +18,8 @@ interface UpdateProfileData {
 	currency?: string;
 	locale?: string;
 	timezone?: string;
+	monthlyIncome?: number | null;
+	paydayOfMonth?: number | null;
 }
 
 export interface ProfileWithComputed {
@@ -34,9 +36,22 @@ export interface ProfileWithComputed {
 	currency: string;
 	locale: string;
 	timezone: string;
+	onboardingCompleted: boolean;
+	monthlyIncome: number | null;
+	paydayOfMonth: number | null;
 	createdAt: Date;
 	updatedAt: Date;
 }
+
+const ONBOARDING_REQUIRED_FIELDS = [
+	"firstName",
+	"lastName",
+	"currency",
+	"locale",
+	"timezone",
+	"monthlyIncome",
+	"paydayOfMonth",
+] as const;
 
 @Injectable()
 export class ProfilesService {
@@ -92,6 +107,9 @@ export class ProfilesService {
 			currency: profile.currency,
 			locale: profile.locale,
 			timezone: profile.timezone,
+			onboardingCompleted: profile.onboardingCompleted,
+			monthlyIncome: profile.monthlyIncome ? Number(profile.monthlyIncome) : null,
+			paydayOfMonth: profile.paydayOfMonth,
 			createdAt: profile.createdAt,
 			updatedAt: profile.updatedAt,
 		};
@@ -107,5 +125,41 @@ export class ProfilesService {
 		const last = profile.lastName?.[0]?.toUpperCase();
 		if (!first && !last) return null;
 		return [first, last].filter(Boolean).join("");
+	}
+
+	validateOnboarding(profile: Profile): { valid: boolean; missingFields: string[] } {
+		const missingFields: string[] = [];
+
+		for (const field of ONBOARDING_REQUIRED_FIELDS) {
+			const value = profile[field];
+			if (value === null || value === undefined || value === "") {
+				missingFields.push(field);
+			}
+		}
+
+		return {
+			valid: missingFields.length === 0,
+			missingFields,
+		};
+	}
+
+	async completeOnboarding(profileId: string): Promise<Profile> {
+		const profile = await this.prisma.profile.findUnique({ where: { id: profileId } });
+		if (!profile) {
+			throw new NotFoundException("Profile not found");
+		}
+
+		const { valid, missingFields } = this.validateOnboarding(profile);
+		if (!valid) {
+			throw new BadRequestException({
+				message: "Onboarding requirements not met",
+				missingFields,
+			});
+		}
+
+		return this.prisma.profile.update({
+			where: { id: profileId },
+			data: { onboardingCompleted: true },
+		});
 	}
 }

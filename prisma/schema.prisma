@@ -16,13 +16,16 @@ model Profile {
   firstName      String?  @map("first_name")
   lastName       String?  @map("last_name")
   secondLastName String?  @map("second_last_name")
-  avatarUrl      String?  @map("avatar_url")
-  phone          String?
-  currency       String   @default("MXN")
-  locale         String   @default("es-MX")
-  timezone       String   @default("America/Mexico_City")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  avatarUrl           String?  @map("avatar_url")
+  phone               String?
+  currency            String   @default("MXN")
+  locale              String   @default("es-MX")
+  timezone            String   @default("America/Mexico_City")
+  onboardingCompleted Boolean  @default(false) @map("onboarding_completed")
+  monthlyIncome       Decimal? @map("monthly_income") @db.Decimal(12, 2)
+  paydayOfMonth       Int?     @map("payday_of_month")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
 
   accounts     Account[]
   categories   Category[]
