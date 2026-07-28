@@ -1,0 +1,120 @@
+import { Type } from "class-transformer";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import {
+	IsInt,
+	IsNotEmpty,
+	IsNumber,
+	IsOptional,
+	IsString,
+	Max,
+	MaxLength,
+	Min,
+} from "class-validator";
+
+export class CreateCreditCardDto {
+	@ApiProperty({ example: "account-uuid", description: "Account ID (must be type CREDIT)" })
+	@IsString()
+	@IsNotEmpty()
+	accountId!: string;
+
+	@ApiProperty({ example: 50000, description: "Credit limit" })
+	@Type(() => Number)
+	@IsNumber()
+	@Min(0)
+	creditLimit!: number;
+
+	@ApiProperty({ example: 15, description: "Cut day of the month (1-31)" })
+	@Type(() => Number)
+	@IsInt()
+	@Min(1)
+	@Max(31)
+	cutDay!: number;
+
+	@ApiProperty({ example: 25, description: "Payment day of the month (1-31)" })
+	@Type(() => Number)
+	@IsInt()
+	@Min(1)
+	@Max(31)
+	paymentDay!: number;
+
+	@ApiProperty({ example: 0.36, description: "Annual interest rate as decimal (0.36 = 36%)" })
+	@Type(() => Number)
+	@IsNumber()
+	@Min(0)
+	interestRate!: number;
+
+	@ApiPropertyOptional({ example: 12, description: "Number of months without interest (promotional)", required: false })
+	@IsOptional()
+	@Type(() => Number)
+	@IsInt()
+	@Min(0)
+	noInterestMonths?: number;
+}
+
+export class UpdateCreditCardDto {
+	@ApiPropertyOptional({ example: 50000, description: "Credit limit" })
+	@IsOptional()
+	@Type(() => Number)
+	@IsNumber()
+	@Min(0)
+	creditLimit?: number;
+
+	@ApiPropertyOptional({ example: 15, description: "Cut day of the month (1-31)" })
+	@IsOptional()
+	@Type(() => Number)
+	@IsInt()
+	@Min(1)
+	@Max(31)
+	cutDay?: number;
+
+	@ApiPropertyOptional({ example: 25, description: "Payment day of the month (1-31)" })
+	@IsOptional()
+	@Type(() => Number)
+	@IsInt()
+	@Min(1)
+	@Max(31)
+	paymentDay?: number;
+
+	@ApiPropertyOptional({ example: 0.36, description: "Annual interest rate as decimal" })
+	@IsOptional()
+	@Type(() => Number)
+	@IsNumber()
+	@Min(0)
+	interestRate?: number;
+
+	@ApiPropertyOptional({ example: 12, description: "Number of months without interest" })
+	@IsOptional()
+	@Type(() => Number)
+	@IsInt()
+	@Min(0)
+	noInterestMonths?: number;
+}
+
+export class CreditCardResponseDto {
+	@ApiProperty({ example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890", description: "Credit card ID" })
+	id!: string;
+
+	@ApiProperty({ example: "account-uuid", description: "Associated account ID" })
+	accountId!: string;
+
+	@ApiProperty({ example: 50000, description: "Credit limit" })
+	creditLimit!: number;
+
+	@ApiProperty({ example: 15, description: "Cut day of the month" })
+	cutDay!: number;
+
+	@ApiProperty({ example: 25, description: "Payment day of the month" })
+	paymentDay!: number;
+
+	@ApiProperty({ example: 0.36, description: "Annual interest rate as decimal" })
+	interestRate!: number;
+
+	@ApiProperty({ example: 12, description: "Number of months without interest" })
+	noInterestMonths!: number;
+
+	@ApiProperty({ example: "2026-07-28T20:00:00.000Z", description: "Creation date" })
+	createdAt!: Date;
+
+	@ApiProperty({ example: "2026-07-28T20:00:00.000Z", description: "Last update date" })
+	updatedAt!: Date;
+}
