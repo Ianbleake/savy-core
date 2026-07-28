@@ -50,6 +50,14 @@ export class CreateIncomeSourceDto {
 	@ArrayMaxSize(2)
 	@IsInt({ each: true })
 	paydays!: number[];
+
+	@ApiProperty({
+		example: "account-uuid",
+		description: "Destination account ID where income balance lands (must be DEBIT or CASH)",
+	})
+	@IsString()
+	@IsNotEmpty()
+	destinationAccountId!: string;
 }
 
 export class UpdateIncomeSourceDto {
@@ -86,6 +94,15 @@ export class UpdateIncomeSourceDto {
 	@ArrayMaxSize(2)
 	@IsInt({ each: true })
 	paydays?: number[];
+
+	@ApiPropertyOptional({
+		example: "account-uuid",
+		description: "Destination account ID where income balance lands (must be DEBIT or CASH)",
+	})
+	@IsOptional()
+	@IsString()
+	@IsNotEmpty()
+	destinationAccountId?: string;
 }
 
 export class IncomeSourceResponseDto {
@@ -110,6 +127,12 @@ export class IncomeSourceResponseDto {
 	})
 	paydays!: number[];
 
+	@ApiProperty({
+		example: "account-uuid",
+		description: "Destination account ID where income balance lands",
+	})
+	destinationAccountId!: string;
+
 	@ApiProperty({ example: true, description: "Whether the income source is active" })
 	isActive!: boolean;
 
@@ -126,8 +149,8 @@ export class BulkCreateIncomeSourcesDto {
 	@ApiProperty({
 		type: [CreateIncomeSourceDto],
 		example: [
-			{ name: "Trabajo principal", amount: 25000, frequency: "MONTHLY", paydays: [15] },
-			{ name: "Freelance", amount: 5000, frequency: "WEEKLY", paydays: [5] },
+			{ name: "Trabajo principal", amount: 25000, frequency: "MONTHLY", paydays: [15], destinationAccountId: "acct-uuid-1" },
+			{ name: "Freelance", amount: 5000, frequency: "WEEKLY", paydays: [5], destinationAccountId: "acct-uuid-1" },
 		],
 		description: "Array of income sources to create (1-10 items)",
 	})
@@ -142,7 +165,7 @@ export class BulkCreateIncomeSourcesDto {
 
 export class FailedIncomeSourceDto {
 	@ApiProperty({
-		example: { name: "Trabajo principal", amount: -100, frequency: "MONTHLY", paydays: [15] },
+		example: { name: "Trabajo principal", amount: -100, frequency: "MONTHLY", paydays: [15], destinationAccountId: "acct-uuid-1" },
 		description: "The original input that failed validation",
 	})
 	input!: Record<string, unknown>;

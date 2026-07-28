@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { plainToInstance } from "class-transformer";
 import { validate } from "class-validator";
-import type { IncomeFrequency, IncomeSource } from "../generated/prisma/client";
+import type { AccountType, IncomeFrequency, IncomeSource } from "../generated/prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import {
 	CreateIncomeSourceDto,
@@ -21,6 +21,8 @@ const PAYDAY_RULES: Record<IncomeFrequency, { count: number; max: number; label:
 	BIWEEKLY: { count: 2, max: 31, label: "days of month (1-31)" },
 	MONTHLY: { count: 1, max: 31, label: "day of month (1-31)" },
 };
+
+const VALID_DESTINATION_TYPES: AccountType[] = ["DEBIT", "CASH"];
 
 @Injectable()
 export class IncomeSourcesService {
@@ -49,6 +51,8 @@ export class IncomeSourcesService {
 			throw new BadRequestException(paydayErrors);
 		}
 
+		await this.validateDestinationAccount(dto.destinationAccountId, profileId);
+
 		return this.prisma.incomeSource.create({
 			data: {
 				profileId,
@@ -56,6 +60,7 @@ export class IncomeSourcesService {
 				amount: dto.amount,
 				frequency: dto.frequency,
 				paydays: dto.paydays,
+				destinationAccountId: dto.destinationAccountId,
 			},
 		});
 	}
@@ -69,6 +74,10 @@ export class IncomeSourcesService {
 		const paydayErrors = this.validatePaydays(frequency, paydays);
 		if (paydayErrors.length > 0) {
 			throw new BadRequestException(paydayErrors);
+		}
+
+		if (dto.destinationAccountId) {
+			await this.validateDestinationAccount(dto.destinationAccountId, profileId);
 		}
 
 		return this.prisma.incomeSource.update({
@@ -119,6 +128,18 @@ export class IncomeSourcesService {
 			}
 
 			try {
+				const destinationErrors = await this.collectDestinationErrors(
+					instance.destinationAccountId,
+					profileId,
+				);
+				if (destinationErrors.length > 0) {
+					failed.push({
+						input: raw,
+						errors: destinationErrors,
+					});
+					continue;
+				}
+
 				const created = await this.prisma.incomeSource.create({
 					data: {
 						profileId,
@@ -126,6 +147,7 @@ export class IncomeSourcesService {
 						amount: instance.amount,
 						frequency: instance.frequency,
 						paydays: instance.paydays,
+						destinationAccountId: instance.destinationAccountId,
 					},
 				});
 				successful.push(created);
@@ -165,5 +187,36 @@ export class IncomeSourcesService {
 		}
 
 		return errors;
+	}
+
+	/** For single create/update: throws on invalid. */
+	private async validateDestinationAccount(
+		accountId: string,
+		profileId: string,
+	): Promise<void> {
+		const errors = await this.collectDestinationErrors(accountId, profileId);
+		if (errors.length > 0) {
+			throw new BadRequestException(errors);
+		}
+	}
+
+	/** For bulk: returns errors instead of throwing. */
+	private async collectDestinationErrors(
+		accountId: string,
+		profileId: string,
+	): Promise<string[]> {
+		const account = await this.prisma.account.findFirst({
+			where: { id: accountId, profileId },
+			select: { id: true, type: true },
+		});
+		if (!account) {
+			return ["Destination account not found or does not belong to the user"];
+		}
+		if (!VALID_DESTINATION_TYPES.includes(account.type)) {
+			return [
+				`Destination account must be DEBIT or CASH, got ${account.type}`,
+			];
+		}
+		return [];
 	}
 }
