@@ -6,6 +6,7 @@ import { AccountsModule } from "./accounts/accounts.module";
 import { AuthModule } from "./auth/auth.module";
 import { JwtAuthGuard } from "./auth/jwt-auth.guard";
 import { BanksModule } from "./banks/banks.module";
+import { BudgetsModule } from "./budgets/budgets.module";
 import { CategoriesModule } from "./categories/categories.module";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
 import { ResponseInterceptor } from "./common/interceptors/response.interceptor";
@@ -37,6 +38,7 @@ import { TransactionsModule } from "./transactions/transactions.module";
 		IncomeSourcesModule,
 		TransactionsModule,
 		SavingsGoalsModule,
+		BudgetsModule,
 	],
 	providers: [
 		{
