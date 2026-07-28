@@ -25,9 +25,14 @@ export class AccountsService {
 	}
 
 	async create(profileId: string, dto: CreateAccountDto): Promise<Account> {
+		if (dto.bankId) {
+			await this.validateBankOwnership(dto.bankId, profileId);
+		}
+
 		return this.prisma.account.create({
 			data: {
 				profileId,
+				bankId: dto.bankId ?? null,
 				name: dto.name,
 				type: dto.type,
 				currency: dto.currency ?? "MXN",
@@ -40,6 +45,11 @@ export class AccountsService {
 
 	async update(id: string, profileId: string, dto: UpdateAccountDto): Promise<Account> {
 		await this.findOne(id, profileId);
+
+		if (dto.bankId) {
+			await this.validateBankOwnership(dto.bankId, profileId);
+		}
+
 		return this.prisma.account.update({
 			where: { id },
 			data: dto,
@@ -52,5 +62,15 @@ export class AccountsService {
 			where: { id },
 			data: { isActive: false },
 		});
+	}
+
+	private async validateBankOwnership(bankId: string, profileId: string): Promise<void> {
+		const bank = await this.prisma.bank.findFirst({
+			where: { id: bankId, profileId },
+			select: { id: true },
+		});
+		if (!bank) {
+			throw new NotFoundException("Bank not found");
+		}
 	}
 }

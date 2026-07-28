@@ -3,7 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagg
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { Profile } from "../generated/prisma/client";
 import { AccountsService } from "./accounts.service";
-import { CreateAccountDto, UpdateAccountDto } from "./dto/account.dto";
+import { AccountResponseDto, CreateAccountDto, UpdateAccountDto } from "./dto/account.dto";
 
 @ApiTags("accounts")
 @ApiBearerAuth()
@@ -13,14 +13,14 @@ export class AccountsController {
 
 	@Get()
 	@ApiOperation({ summary: "List all active accounts for the current user" })
-	@ApiResponse({ status: 200, description: "Returns array of accounts" })
+	@ApiResponse({ status: 200, description: "Returns array of accounts", type: [AccountResponseDto] })
 	async findAll(@CurrentUser() profile: Profile) {
 		return this.accountsService.findAllByProfile(profile.id);
 	}
 
 	@Get(":id")
 	@ApiOperation({ summary: "Get a single account by ID" })
-	@ApiResponse({ status: 200, description: "Returns the account" })
+	@ApiResponse({ status: 200, description: "Returns the account", type: AccountResponseDto })
 	@ApiResponse({ status: 404, description: "Account not found" })
 	async findOne(@Param("id") id: string, @CurrentUser() profile: Profile) {
 		return this.accountsService.findOne(id, profile.id);
@@ -28,14 +28,14 @@ export class AccountsController {
 
 	@Post()
 	@ApiOperation({ summary: "Create a new account" })
-	@ApiResponse({ status: 201, description: "Returns the created account" })
+	@ApiResponse({ status: 201, description: "Returns the created account", type: AccountResponseDto })
 	async create(@CurrentUser() profile: Profile, @Body() dto: CreateAccountDto) {
 		return this.accountsService.create(profile.id, dto);
 	}
 
 	@Patch(":id")
 	@ApiOperation({ summary: "Update an account by ID" })
-	@ApiResponse({ status: 200, description: "Returns the updated account" })
+	@ApiResponse({ status: 200, description: "Returns the updated account", type: AccountResponseDto })
 	@ApiResponse({ status: 404, description: "Account not found" })
 	async update(
 		@Param("id") id: string,
