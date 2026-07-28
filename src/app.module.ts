@@ -12,6 +12,7 @@ import { ResponseInterceptor } from "./common/interceptors/response.interceptor"
 import { IncomeSourcesModule } from "./income-sources/income-sources.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { ProfilesModule } from "./profiles/profiles.module";
+import { SavingsGoalsModule } from "./savings-goals/savings-goals.module";
 import { TransactionsModule } from "./transactions/transactions.module";
 
 @Module({
@@ -35,6 +36,7 @@ import { TransactionsModule } from "./transactions/transactions.module";
 		CategoriesModule,
 		IncomeSourcesModule,
 		TransactionsModule,
+		SavingsGoalsModule,
 	],
 	providers: [
 		{
