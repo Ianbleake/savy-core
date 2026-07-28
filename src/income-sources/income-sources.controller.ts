@@ -3,7 +3,6 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagg
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { Profile } from "../generated/prisma/client";
 import {
-	BulkCreateIncomeSourcesDto,
 	BulkCreateResponseDto,
 	CreateIncomeSourceDto,
 	IncomeSourceResponseDto,
@@ -46,8 +45,12 @@ export class IncomeSourcesController {
 		description: "Returns successful items, failed items with errors, total count, and creationState",
 		type: BulkCreateResponseDto,
 	})
-	async bulkCreate(@CurrentUser() profile: Profile, @Body() dto: BulkCreateIncomeSourcesDto) {
-		return this.incomeSourcesService.bulkCreate(profile.id, dto);
+	async bulkCreate(
+		@CurrentUser() profile: Profile,
+		@Body() body: { sources?: unknown[] },
+	) {
+		const sources = Array.isArray(body?.sources) ? body.sources : [];
+		return this.incomeSourcesService.bulkCreate(profile.id, sources as Record<string, unknown>[]);
 	}
 
 	@Patch(":id")

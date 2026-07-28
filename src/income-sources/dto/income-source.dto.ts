@@ -131,10 +131,13 @@ export class BulkCreateIncomeSourcesDto {
 		],
 		description: "Array of income sources to create (1-10 items)",
 	})
+	// Using any[] intentionally: the global ValidationPipe with enableImplicitConversion
+	// corrupts items when typed as Record<string, unknown>[] (converts them to empty arrays).
+	// Items are validated per-item in the service via plainToInstance + validate.
 	@IsArray()
 	@ArrayMinSize(1)
 	@ArrayMaxSize(10)
-	sources!: Record<string, unknown>[];
+	sources!: any[];
 }
 
 export class FailedIncomeSourceDto {

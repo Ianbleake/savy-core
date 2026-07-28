@@ -4,7 +4,6 @@ import { validate } from "class-validator";
 import type { IncomeFrequency, IncomeSource } from "../generated/prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import {
-	BulkCreateIncomeSourcesDto,
 	CreateIncomeSourceDto,
 	FailedIncomeSourceDto,
 	UpdateIncomeSourceDto,
@@ -86,11 +85,14 @@ export class IncomeSourcesService {
 		});
 	}
 
-	async bulkCreate(profileId: string, dto: BulkCreateIncomeSourcesDto): Promise<BulkCreateResult> {
+	async bulkCreate(
+		profileId: string,
+		sources: Record<string, unknown>[],
+	): Promise<BulkCreateResult> {
 		const successful: IncomeSource[] = [];
 		const failed: FailedIncomeSourceDto[] = [];
 
-		for (const raw of dto.sources) {
+		for (const raw of sources) {
 			const instance = plainToInstance(CreateIncomeSourceDto, raw);
 			const decoratorErrors = await validate(instance, {
 				whitelist: true,
@@ -135,7 +137,7 @@ export class IncomeSourcesService {
 			}
 		}
 
-		const total = dto.sources.length;
+		const total = sources.length;
 		const creationState: BulkCreateResult["creationState"] =
 			successful.length === total
 				? "success"
