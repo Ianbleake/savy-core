@@ -122,7 +122,7 @@ export class OnboardingValidationResponseDto {
 	valid!: boolean;
 
 	@ApiProperty({
-		example: ["firstName", "incomeSources"],
+		example: ["firstName", "accounts", "incomeSources"],
 		description: "List of required fields that are missing or invalid",
 		type: [String],
 	})
