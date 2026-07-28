@@ -1,0 +1,76 @@
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import type { Loan } from "../generated/prisma/client";
+import { PrismaService } from "../prisma/prisma.service";
+import { CreateLoanDto, UpdateLoanDto } from "./dto/loan.dto";
+
+@Injectable()
+export class LoansService {
+	constructor(private readonly prisma: PrismaService) {}
+
+	async findAllByProfile(profileId: string): Promise<Loan[]> {
+		return this.prisma.loan.findMany({
+			where: { account: { profileId } },
+			orderBy: { createdAt: "desc" },
+		});
+	}
+
+	async findOne(id: string, profileId: string): Promise<Loan> {
+		const loan = await this.prisma.loan.findFirst({
+			where: { id, account: { profileId } },
+		});
+		if (!loan) {
+			throw new NotFoundException("Loan not found");
+		}
+		return loan;
+	}
+
+	async create(profileId: string, dto: CreateLoanDto): Promise<Loan> {
+		await this.validateAccount(dto.accountId, profileId);
+
+		const existing = await this.prisma.loan.findUnique({
+			where: { accountId: dto.accountId },
+			select: { id: true },
+		});
+		if (existing) {
+			throw new BadRequestException("This account already has a loan associated");
+		}
+
+		return this.prisma.loan.create({
+			data: {
+				accountId: dto.accountId,
+				principal: dto.principal,
+				interestRate: dto.interestRate,
+				termMonths: dto.termMonths,
+				startDate: new Date(dto.startDate),
+				monthlyPayment: dto.monthlyPayment,
+				remaining: dto.remaining ?? dto.principal,
+			},
+		});
+	}
+
+	async update(id: string, profileId: string, dto: UpdateLoanDto): Promise<Loan> {
+		await this.findOne(id, profileId);
+		return this.prisma.loan.update({
+			where: { id },
+			data: dto,
+		});
+	}
+
+	async remove(id: string, profileId: string): Promise<void> {
+		await this.findOne(id, profileId);
+		await this.prisma.loan.delete({ where: { id } });
+	}
+
+	private async validateAccount(accountId: string, profileId: string): Promise<void> {
+		const account = await this.prisma.account.findFirst({
+			where: { id: accountId, profileId },
+			select: { id: true, type: true },
+		});
+		if (!account) {
+			throw new NotFoundException("Account not found");
+		}
+		if (account.type !== "LOAN") {
+			throw new BadRequestException("Account must be of type LOAN");
+		}
+	}
+}
