@@ -71,13 +71,27 @@ export class ProfilesService {
 	}
 
 	async create(data: CreateProfileData): Promise<Profile> {
-		return this.prisma.profile.create({
-			data: {
-				authId: data.authId,
-				email: data.email,
-				firstName: data.firstName ?? null,
-				lastName: data.lastName ?? null,
-			},
+		return this.prisma.$transaction(async (tx) => {
+			const profile = await tx.profile.create({
+				data: {
+					authId: data.authId,
+					email: data.email,
+					firstName: data.firstName ?? null,
+					lastName: data.lastName ?? null,
+				},
+			});
+
+			await tx.account.create({
+				data: {
+					profileId: profile.id,
+					name: "Efectivo",
+					type: "CASH",
+					currency: profile.currency,
+					balance: 0,
+				},
+			});
+
+			return profile;
 		});
 	}
 
@@ -153,6 +167,17 @@ export class ProfilesService {
 			if (value === null || value === undefined || value === "") {
 				missingFields.push(field);
 			}
+		}
+
+		const validAccounts = await this.prisma.account.count({
+			where: {
+				profileId: profile.id,
+				isActive: true,
+				type: { in: ["DEBIT", "CASH"] },
+			},
+		});
+		if (validAccounts === 0) {
+			missingFields.push("accounts");
 		}
 
 		const activeSources = await this.prisma.incomeSource.count({
