@@ -7,10 +7,26 @@ import { CreateBudgetDto, UpdateBudgetDto } from "./dto/budget.dto";
 export class BudgetsService {
 	constructor(private readonly prisma: PrismaService) {}
 
-	async findAllByProfile(profileId: string): Promise<Budget[]> {
+	async findAllByProfile(
+		profileId: string,
+		filters?: {
+			isActive?: boolean;
+			period?: BudgetPeriod;
+			sortBy?: "amount" | "startDate";
+			order?: "asc" | "desc";
+		},
+	): Promise<Budget[]> {
+		const isActive = filters?.isActive ?? true;
+		const sortBy = filters?.sortBy ?? "startDate";
+		const order = filters?.order ?? "desc";
+
 		return this.prisma.budget.findMany({
-			where: { profileId, isActive: true },
-			orderBy: { createdAt: "desc" },
+			where: {
+				profileId,
+				isActive,
+				...(filters?.period ? { period: filters.period } : {}),
+			},
+			orderBy: { [sortBy]: order },
 		});
 	}
 
@@ -55,7 +71,9 @@ export class BudgetsService {
 				startDate: dto.startDate ? new Date(dto.startDate) : existing.startDate,
 				endDate:
 					dto.endDate !== undefined
-						? (dto.endDate ? new Date(dto.endDate) : null)
+						? dto.endDate
+							? new Date(dto.endDate)
+							: null
 						: existing.endDate,
 			},
 		});
@@ -69,7 +87,10 @@ export class BudgetsService {
 		});
 	}
 
-	async getProgress(id: string, profileId: string): Promise<{
+	async getProgress(
+		id: string,
+		profileId: string,
+	): Promise<{
 		spent: number;
 		budget: number;
 		remaining: number;
@@ -78,19 +99,11 @@ export class BudgetsService {
 		periodEnd: Date;
 	}> {
 		const budget = await this.findOne(id, profileId);
-		const { periodStart, periodEnd } = this.computeCurrentPeriod(
-			budget.startDate,
-			budget.period,
-		);
+		const { periodStart, periodEnd } = this.computeCurrentPeriod(budget.startDate, budget.period);
 
 		// Sum all EXPENSE transactions in this category within the period
 		// across all accounts owned by the user
-		const accountIds = await this.prisma.account
-			.findMany({
-				where: { profileId },
-				select: { id: true },
-			})
-			.then((accounts) => accounts.map((a) => a.id));
+		const accountIds = await this.getAccountIds(profileId);
 
 		const result = await this.prisma.transaction.aggregate({
 			where: {
@@ -117,7 +130,79 @@ export class BudgetsService {
 		};
 	}
 
-	private computeCurrentPeriod(startDate: Date, period: BudgetPeriod): {
+	/**
+	 * Compute progress for ALL active budgets of a profile in a single pass.
+	 * Reused by DashboardService to avoid duplicating period logic.
+	 */
+	async getProgressForAll(profileId: string): Promise<
+		Array<{
+			id: string;
+			categoryName: string;
+			spent: number;
+			budget: number;
+			remaining: number;
+			percentage: number;
+		}>
+	> {
+		const budgets = await this.prisma.budget.findMany({
+			where: { profileId, isActive: true },
+			include: { category: { select: { name: true } } },
+		});
+
+		if (budgets.length === 0) {
+			return [];
+		}
+
+		const accountIds = await this.getAccountIds(profileId);
+
+		const results = await Promise.all(
+			budgets.map(async (budget) => {
+				const { periodStart, periodEnd } = this.computeCurrentPeriod(
+					budget.startDate,
+					budget.period,
+				);
+
+				const agg = await this.prisma.transaction.aggregate({
+					where: {
+						type: "EXPENSE",
+						categoryId: budget.categoryId,
+						accountId: { in: accountIds },
+						date: { gte: periodStart, lte: periodEnd },
+					},
+					_sum: { amount: true },
+				});
+
+				const spent = agg._sum.amount ? Number(agg._sum.amount) : 0;
+				const budgetAmount = Number(budget.amount);
+				const remaining = budgetAmount - spent;
+				const percentage = budgetAmount > 0 ? Math.round((spent / budgetAmount) * 100) : 0;
+
+				return {
+					id: budget.id,
+					categoryName: budget.category.name,
+					spent,
+					budget: budgetAmount,
+					remaining,
+					percentage,
+				};
+			}),
+		);
+
+		return results;
+	}
+
+	private async getAccountIds(profileId: string): Promise<string[]> {
+		const accounts = await this.prisma.account.findMany({
+			where: { profileId },
+			select: { id: true },
+		});
+		return accounts.map((a) => a.id);
+	}
+
+	private computeCurrentPeriod(
+		startDate: Date,
+		period: BudgetPeriod,
+	): {
 		periodStart: Date;
 		periodEnd: Date;
 	} {
@@ -160,8 +245,7 @@ export class BudgetsService {
 			}
 
 			// Count months from original start to find the exact cycle
-			const monthsSinceStart =
-				(cycleYear - startYear) * 12 + (cycleMonth - startMonth);
+			const monthsSinceStart = (cycleYear - startYear) * 12 + (cycleMonth - startMonth);
 			const adjustedMonths = Math.max(0, monthsSinceStart);
 
 			const periodStart = new Date(

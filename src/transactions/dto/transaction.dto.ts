@@ -1,8 +1,9 @@
-import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { Type } from "class-transformer";
 import {
 	IsDateString,
 	IsEnum,
+	IsInt,
 	IsNotEmpty,
 	IsNumber,
 	IsOptional,
@@ -18,6 +19,17 @@ enum TransactionType {
 	PAYMENT = "PAYMENT",
 }
 
+enum TransactionSortBy {
+	date = "date",
+	amount = "amount",
+	createdAt = "createdAt",
+}
+
+enum SortOrder {
+	asc = "asc",
+	desc = "desc",
+}
+
 export class CreateTransactionDto {
 	@ApiProperty({ example: "account-uuid", description: "Source account ID (where money leaves)" })
 	@IsString()
@@ -26,7 +38,8 @@ export class CreateTransactionDto {
 
 	@ApiPropertyOptional({
 		example: "destination-uuid",
-		description: "Destination account ID (required for TRANSFER and PAYMENT, null for INCOME/EXPENSE)",
+		description:
+			"Destination account ID (required for TRANSFER and PAYMENT, null for INCOME/EXPENSE)",
 	})
 	@IsOptional()
 	@IsString()
@@ -66,7 +79,10 @@ export class CreateTransactionDto {
 	@MaxLength(1000)
 	note?: string;
 
-	@ApiPropertyOptional({ example: "2026-07-28T12:00:00.000Z", description: "Transaction date (defaults to now)" })
+	@ApiPropertyOptional({
+		example: "2026-07-28T12:00:00.000Z",
+		description: "Transaction date (defaults to now)",
+	})
 	@IsOptional()
 	@IsDateString()
 	date?: string;
@@ -89,7 +105,11 @@ export class UpdateTransactionDto {
 	@IsString()
 	categoryId?: string | null;
 
-	@ApiPropertyOptional({ enum: TransactionType, example: "EXPENSE", description: "Transaction type" })
+	@ApiPropertyOptional({
+		enum: TransactionType,
+		example: "EXPENSE",
+		description: "Transaction type",
+	})
 	@IsOptional()
 	@IsEnum(TransactionType)
 	type?: TransactionType;
@@ -126,7 +146,10 @@ export class TransactionResponseDto {
 	@ApiProperty({ example: "account-uuid", description: "Source account ID" })
 	accountId!: string;
 
-	@ApiPropertyOptional({ example: "destination-uuid", description: "Destination account ID (TRANSFER/PAYMENT only)" })
+	@ApiPropertyOptional({
+		example: "destination-uuid",
+		description: "Destination account ID (TRANSFER/PAYMENT only)",
+	})
 	destinationAccountId!: string | null;
 
 	@ApiPropertyOptional({ example: "category-uuid", description: "Category ID" })
@@ -152,4 +175,91 @@ export class TransactionResponseDto {
 
 	@ApiProperty({ example: "2026-07-28T12:00:00.000Z", description: "Last update date" })
 	updatedAt!: Date;
+}
+
+export class QueryTransactionsDto {
+	@ApiPropertyOptional({
+		example: "account-uuid",
+		description: "Filter by account (source or destination)",
+	})
+	@IsOptional()
+	@IsString()
+	accountId?: string;
+
+	@ApiPropertyOptional({
+		enum: TransactionType,
+		example: "EXPENSE",
+		description: "Filter by transaction type",
+	})
+	@IsOptional()
+	@IsEnum(TransactionType)
+	type?: TransactionType;
+
+	@ApiPropertyOptional({ example: "category-uuid", description: "Filter by category" })
+	@IsOptional()
+	@IsString()
+	categoryId?: string;
+
+	@ApiPropertyOptional({
+		example: "bank-uuid",
+		description: "Filter by accounts belonging to this bank",
+	})
+	@IsOptional()
+	@IsString()
+	bankId?: string;
+
+	@ApiPropertyOptional({
+		example: "grocery",
+		description: "Partial case-insensitive search in description",
+	})
+	@IsOptional()
+	@IsString()
+	search?: string;
+
+	@ApiPropertyOptional({
+		example: "2026-07-01T00:00:00.000Z",
+		description: "Start date (ISO 8601)",
+	})
+	@IsOptional()
+	@IsDateString()
+	from?: string;
+
+	@ApiPropertyOptional({ example: "2026-07-31T23:59:59.999Z", description: "End date (ISO 8601)" })
+	@IsOptional()
+	@IsDateString()
+	to?: string;
+
+	@ApiPropertyOptional({ example: 1, description: "Page number (default 1)" })
+	@IsOptional()
+	@Type(() => Number)
+	@IsInt()
+	@Min(1)
+	page?: number;
+
+	@ApiPropertyOptional({ example: 50, description: "Items per page (default 50, max 100)" })
+	@IsOptional()
+	@Type(() => Number)
+	@IsInt()
+	@Min(1)
+	limit?: number;
+
+	@ApiPropertyOptional({
+		enum: TransactionSortBy,
+		example: "date",
+		default: "date",
+		description: "Sort field",
+	})
+	@IsOptional()
+	@IsEnum(TransactionSortBy)
+	sortBy?: TransactionSortBy;
+
+	@ApiPropertyOptional({
+		enum: SortOrder,
+		example: "desc",
+		default: "desc",
+		description: "Sort order",
+	})
+	@IsOptional()
+	@IsEnum(SortOrder)
+	order?: SortOrder;
 }

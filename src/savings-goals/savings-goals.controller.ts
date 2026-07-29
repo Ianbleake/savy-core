@@ -1,9 +1,10 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { Profile } from "../generated/prisma/client";
 import {
 	CreateSavingsGoalDto,
+	QuerySavingsGoalsDto,
 	SavingsGoalResponseDto,
 	UpdateSavingsGoalDto,
 } from "./dto/savings-goal.dto";
@@ -16,15 +17,27 @@ export class SavingsGoalsController {
 	constructor(private readonly savingsGoalsService: SavingsGoalsService) {}
 
 	@Get()
-	@ApiOperation({ summary: "List all savings goals for the current user" })
-	@ApiResponse({ status: 200, description: "Returns array of savings goals with computed progress", type: [SavingsGoalResponseDto] })
-	async findAll(@CurrentUser() profile: Profile) {
-		return this.savingsGoalsService.findAllByProfile(profile.id);
+	@ApiOperation({ summary: "List all savings goals for the current user with optional filters" })
+	@ApiResponse({
+		status: 200,
+		description: "Returns array of savings goals with computed progress",
+		type: [SavingsGoalResponseDto],
+	})
+	async findAll(@CurrentUser() profile: Profile, @Query() query: QuerySavingsGoalsDto) {
+		return this.savingsGoalsService.findAllByProfile(profile.id, {
+			isCompleted: query.isCompleted === undefined ? undefined : query.isCompleted === "true",
+			sortBy: query.sortBy,
+			order: query.order,
+		});
 	}
 
 	@Get(":id")
 	@ApiOperation({ summary: "Get a single savings goal by ID" })
-	@ApiResponse({ status: 200, description: "Returns the savings goal with computed progress", type: SavingsGoalResponseDto })
+	@ApiResponse({
+		status: 200,
+		description: "Returns the savings goal with computed progress",
+		type: SavingsGoalResponseDto,
+	})
 	@ApiResponse({ status: 404, description: "Savings goal not found" })
 	async findOne(@Param("id") id: string, @CurrentUser() profile: Profile) {
 		return this.savingsGoalsService.findOne(id, profile.id);
@@ -32,7 +45,11 @@ export class SavingsGoalsController {
 
 	@Post()
 	@ApiOperation({ summary: "Create a new savings goal" })
-	@ApiResponse({ status: 201, description: "Returns the created savings goal", type: SavingsGoalResponseDto })
+	@ApiResponse({
+		status: 201,
+		description: "Returns the created savings goal",
+		type: SavingsGoalResponseDto,
+	})
 	@ApiResponse({ status: 400, description: "Account must be DEBIT or CASH" })
 	@ApiResponse({ status: 404, description: "Account not found" })
 	async create(@CurrentUser() profile: Profile, @Body() dto: CreateSavingsGoalDto) {
@@ -41,7 +58,11 @@ export class SavingsGoalsController {
 
 	@Patch(":id")
 	@ApiOperation({ summary: "Update a savings goal by ID" })
-	@ApiResponse({ status: 200, description: "Returns the updated savings goal", type: SavingsGoalResponseDto })
+	@ApiResponse({
+		status: 200,
+		description: "Returns the updated savings goal",
+		type: SavingsGoalResponseDto,
+	})
 	@ApiResponse({ status: 404, description: "Savings goal not found" })
 	async update(
 		@Param("id") id: string,

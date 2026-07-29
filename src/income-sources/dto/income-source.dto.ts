@@ -1,9 +1,10 @@
-import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { Type } from "class-transformer";
 import {
 	ArrayMaxSize,
 	ArrayMinSize,
 	IsArray,
+	IsBooleanString,
 	IsEnum,
 	IsInt,
 	IsNotEmpty,
@@ -18,6 +19,17 @@ enum IncomeFrequency {
 	WEEKLY = "WEEKLY",
 	BIWEEKLY = "BIWEEKLY",
 	MONTHLY = "MONTHLY",
+}
+
+enum IncomeSourceSortBy {
+	name = "name",
+	amount = "amount",
+	createdAt = "createdAt",
+}
+
+enum SortOrder {
+	asc = "asc",
+	desc = "desc",
 }
 
 export class CreateIncomeSourceDto {
@@ -43,7 +55,8 @@ export class CreateIncomeSourceDto {
 
 	@ApiProperty({
 		example: [15],
-		description: "Payment days. WEEKLY: 1 weekday (1-7). BIWEEKLY: 2 days of month (1-31). MONTHLY: 1 day of month (1-31).",
+		description:
+			"Payment days. WEEKLY: 1 weekday (1-7). BIWEEKLY: 2 days of month (1-31). MONTHLY: 1 day of month (1-31).",
 	})
 	@IsArray()
 	@ArrayMinSize(1)
@@ -86,7 +99,8 @@ export class UpdateIncomeSourceDto {
 
 	@ApiPropertyOptional({
 		example: [15],
-		description: "Payment days. WEEKLY: 1 weekday (1-7). BIWEEKLY: 2 days of month (1-31). MONTHLY: 1 day of month (1-31).",
+		description:
+			"Payment days. WEEKLY: 1 weekday (1-7). BIWEEKLY: 2 days of month (1-31). MONTHLY: 1 day of month (1-31).",
 	})
 	@IsOptional()
 	@IsArray()
@@ -123,7 +137,8 @@ export class IncomeSourceResponseDto {
 
 	@ApiProperty({
 		example: [15],
-		description: "Payment days. WEEKLY: 1 weekday (1-7). BIWEEKLY: 2 days of month (1-31). MONTHLY: 1 day of month (1-31).",
+		description:
+			"Payment days. WEEKLY: 1 weekday (1-7). BIWEEKLY: 2 days of month (1-31). MONTHLY: 1 day of month (1-31).",
 	})
 	paydays!: number[];
 
@@ -149,8 +164,20 @@ export class BulkCreateIncomeSourcesDto {
 	@ApiProperty({
 		type: [CreateIncomeSourceDto],
 		example: [
-			{ name: "Trabajo principal", amount: 25000, frequency: "MONTHLY", paydays: [15], destinationAccountId: "acct-uuid-1" },
-			{ name: "Freelance", amount: 5000, frequency: "WEEKLY", paydays: [5], destinationAccountId: "acct-uuid-1" },
+			{
+				name: "Trabajo principal",
+				amount: 25000,
+				frequency: "MONTHLY",
+				paydays: [15],
+				destinationAccountId: "acct-uuid-1",
+			},
+			{
+				name: "Freelance",
+				amount: 5000,
+				frequency: "WEEKLY",
+				paydays: [5],
+				destinationAccountId: "acct-uuid-1",
+			},
 		],
 		description: "Array of income sources to create (1-10 items)",
 	})
@@ -165,7 +192,13 @@ export class BulkCreateIncomeSourcesDto {
 
 export class FailedIncomeSourceDto {
 	@ApiProperty({
-		example: { name: "Trabajo principal", amount: -100, frequency: "MONTHLY", paydays: [15], destinationAccountId: "acct-uuid-1" },
+		example: {
+			name: "Trabajo principal",
+			amount: -100,
+			frequency: "MONTHLY",
+			paydays: [15],
+			destinationAccountId: "acct-uuid-1",
+		},
 		description: "The original input that failed validation",
 	})
 	input!: Record<string, unknown>;
@@ -196,4 +229,34 @@ export class BulkCreateResponseDto {
 		description: "Items that failed validation",
 	})
 	failed!: FailedIncomeSourceDto[];
+}
+
+export class QueryIncomeSourcesDto {
+	@ApiPropertyOptional({
+		example: "true",
+		description: 'Filter by active state (accepts "true"/"false"). Defaults to true.',
+	})
+	@IsOptional()
+	@IsBooleanString()
+	isActive?: string;
+
+	@ApiPropertyOptional({
+		enum: IncomeSourceSortBy,
+		example: "createdAt",
+		default: "createdAt",
+		description: "Sort field",
+	})
+	@IsOptional()
+	@IsEnum(IncomeSourceSortBy)
+	sortBy?: IncomeSourceSortBy;
+
+	@ApiPropertyOptional({
+		enum: SortOrder,
+		example: "desc",
+		default: "desc",
+		description: "Sort order",
+	})
+	@IsOptional()
+	@IsEnum(SortOrder)
+	order?: SortOrder;
 }

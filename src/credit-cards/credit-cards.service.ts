@@ -7,10 +7,18 @@ import { CreateCreditCardDto, UpdateCreditCardDto } from "./dto/credit-card.dto"
 export class CreditCardsService {
 	constructor(private readonly prisma: PrismaService) {}
 
-	async findAllByProfile(profileId: string): Promise<CreditCard[]> {
+	async findAllByProfile(
+		profileId: string,
+		filters?: {
+			sortBy?: "createdAt" | "creditLimit";
+			order?: "asc" | "desc";
+		},
+	): Promise<CreditCard[]> {
+		const sortBy = filters?.sortBy ?? "createdAt";
+		const order = filters?.order ?? "desc";
 		return this.prisma.creditCard.findMany({
 			where: { account: { profileId } },
-			orderBy: { createdAt: "desc" },
+			orderBy: { [sortBy]: order },
 		});
 	}
 

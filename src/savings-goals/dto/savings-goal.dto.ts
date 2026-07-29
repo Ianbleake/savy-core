@@ -1,7 +1,9 @@
-import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { Type } from "class-transformer";
 import {
+	IsBooleanString,
 	IsDateString,
+	IsEnum,
 	IsNotEmpty,
 	IsNumber,
 	IsOptional,
@@ -10,8 +12,22 @@ import {
 	Min,
 } from "class-validator";
 
+enum SavingsGoalSortBy {
+	deadline = "deadline",
+	targetAmount = "targetAmount",
+	currentAmount = "currentAmount",
+}
+
+enum SortOrder {
+	asc = "asc",
+	desc = "desc",
+}
+
 export class CreateSavingsGoalDto {
-	@ApiProperty({ example: "account-uuid", description: "Account ID where the savings money lives (DEBIT or CASH)" })
+	@ApiProperty({
+		example: "account-uuid",
+		description: "Account ID where the savings money lives (DEBIT or CASH)",
+	})
 	@IsString()
 	@IsNotEmpty()
 	accountId!: string;
@@ -40,7 +56,10 @@ export class CreateSavingsGoalDto {
 }
 
 export class UpdateSavingsGoalDto {
-	@ApiPropertyOptional({ example: "account-uuid", description: "Account ID where the savings money lives" })
+	@ApiPropertyOptional({
+		example: "account-uuid",
+		description: "Account ID where the savings money lives",
+	})
 	@IsOptional()
 	@IsString()
 	@IsNotEmpty()
@@ -93,10 +112,16 @@ export class SavingsGoalResponseDto {
 	@ApiPropertyOptional({ example: "#22c55e", description: "UI color" })
 	color!: string | null;
 
-	@ApiProperty({ example: 12500, description: "Current amount saved (computed from account balance)" })
+	@ApiProperty({
+		example: 12500,
+		description: "Current amount saved (computed from account balance)",
+	})
 	currentAmount!: number;
 
-	@ApiProperty({ example: false, description: "Whether the goal is completed (computed: currentAmount >= targetAmount)" })
+	@ApiProperty({
+		example: false,
+		description: "Whether the goal is completed (computed: currentAmount >= targetAmount)",
+	})
 	isCompleted!: boolean;
 
 	@ApiProperty({ example: "2026-07-28T20:31:08.000Z", description: "Creation date" })
@@ -104,4 +129,35 @@ export class SavingsGoalResponseDto {
 
 	@ApiProperty({ example: "2026-07-28T20:31:08.000Z", description: "Last update date" })
 	updatedAt!: Date;
+}
+
+export class QuerySavingsGoalsDto {
+	@ApiPropertyOptional({
+		example: "false",
+		description:
+			'Filter by completed state (accepts "true"/"false"). Computed from account balance vs target.',
+	})
+	@IsOptional()
+	@IsBooleanString()
+	isCompleted?: string;
+
+	@ApiPropertyOptional({
+		enum: SavingsGoalSortBy,
+		example: "deadline",
+		default: "deadline",
+		description: "Sort field. currentAmount is computed and sorted in memory.",
+	})
+	@IsOptional()
+	@IsEnum(SavingsGoalSortBy)
+	sortBy?: SavingsGoalSortBy;
+
+	@ApiPropertyOptional({
+		enum: SortOrder,
+		example: "asc",
+		default: "asc",
+		description: "Sort order",
+	})
+	@IsOptional()
+	@IsEnum(SortOrder)
+	order?: SortOrder;
 }

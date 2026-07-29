@@ -7,11 +7,12 @@ import { AuthModule } from "./auth/auth.module";
 import { JwtAuthGuard } from "./auth/jwt-auth.guard";
 import { BanksModule } from "./banks/banks.module";
 import { BudgetsModule } from "./budgets/budgets.module";
-import { CategoriesModule } from "./categories/categories.module";
 import { CardStatementsModule } from "./card-statements/card-statements.module";
-import { CreditCardsModule } from "./credit-cards/credit-cards.module";
+import { CategoriesModule } from "./categories/categories.module";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
 import { ResponseInterceptor } from "./common/interceptors/response.interceptor";
+import { CreditCardsModule } from "./credit-cards/credit-cards.module";
+import { DashboardModule } from "./dashboard/dashboard.module";
 import { IncomeSourcesModule } from "./income-sources/income-sources.module";
 import { LoansModule } from "./loans/loans.module";
 import { PrismaModule } from "./prisma/prisma.module";
@@ -45,6 +46,7 @@ import { TransactionsModule } from "./transactions/transactions.module";
 		CreditCardsModule,
 		CardStatementsModule,
 		LoansModule,
+		DashboardModule,
 	],
 	providers: [
 		{

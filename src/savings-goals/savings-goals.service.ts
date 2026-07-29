@@ -15,13 +15,42 @@ const VALID_ACCOUNT_TYPES = ["DEBIT", "CASH"];
 export class SavingsGoalsService {
 	constructor(private readonly prisma: PrismaService) {}
 
-	async findAllByProfile(profileId: string): Promise<SavingsGoalWithComputed[]> {
+	async findAllByProfile(
+		profileId: string,
+		filters?: {
+			isCompleted?: boolean;
+			sortBy?: "deadline" | "targetAmount" | "currentAmount";
+			order?: "asc" | "desc";
+		},
+	): Promise<SavingsGoalWithComputed[]> {
+		const sortBy = filters?.sortBy ?? "deadline";
+		const order = filters?.order ?? "asc";
+
+		// deadline/targetAmount can be ordered at the DB layer; currentAmount is computed,
+		// so we fetch then sort in memory.
 		const goals = await this.prisma.savingsGoal.findMany({
 			where: { profileId },
 			include: { account: { select: { balance: true } } },
-			orderBy: { createdAt: "desc" },
+			orderBy:
+				sortBy === "deadline" || sortBy === "targetAmount"
+					? { [sortBy]: order }
+					: { createdAt: "desc" },
 		});
-		return goals.map((g) => this.withComputed(g));
+
+		let mapped = goals.map((g) => this.withComputed(g));
+
+		if (filters?.isCompleted !== undefined) {
+			mapped = mapped.filter((g) => g.isCompleted === filters.isCompleted);
+		}
+
+		if (sortBy === "currentAmount") {
+			mapped.sort((a, b) => {
+				const diff = a.currentAmount - b.currentAmount;
+				return order === "asc" ? diff : -diff;
+			});
+		}
+
+		return mapped;
 	}
 
 	async findOne(id: string, profileId: string): Promise<SavingsGoalWithComputed> {
@@ -74,9 +103,12 @@ export class SavingsGoalsService {
 				accountId: dto.accountId ?? existing.accountId,
 				name: dto.name ?? existing.name,
 				targetAmount: dto.targetAmount ?? existing.targetAmount,
-				deadline: dto.deadline !== undefined
-					? (dto.deadline ? new Date(dto.deadline) : null)
-					: existing.deadline,
+				deadline:
+					dto.deadline !== undefined
+						? dto.deadline
+							? new Date(dto.deadline)
+							: null
+						: existing.deadline,
 				color: dto.color ?? existing.color,
 			},
 			include: { account: { select: { balance: true } } },
@@ -94,7 +126,9 @@ export class SavingsGoalsService {
 		await this.prisma.savingsGoal.delete({ where: { id } });
 	}
 
-	private withComputed(goal: SavingsGoal & { account: { balance: unknown } }): SavingsGoalWithComputed {
+	private withComputed(
+		goal: SavingsGoal & { account: { balance: unknown } },
+	): SavingsGoalWithComputed {
 		const currentAmount = Number(goal.account.balance);
 		const targetAmount = Number(goal.targetAmount);
 		return {

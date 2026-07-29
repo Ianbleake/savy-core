@@ -1,15 +1,25 @@
-import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { Type } from "class-transformer";
 import {
+	IsEnum,
 	IsInt,
 	IsNotEmpty,
 	IsNumber,
 	IsOptional,
 	IsString,
 	Max,
-	MaxLength,
 	Min,
 } from "class-validator";
+
+enum CreditCardSortBy {
+	createdAt = "createdAt",
+	creditLimit = "creditLimit",
+}
+
+enum SortOrder {
+	asc = "asc",
+	desc = "desc",
+}
 
 export class CreateCreditCardDto {
 	@ApiProperty({ example: "account-uuid", description: "Account ID (must be type CREDIT)" })
@@ -43,7 +53,11 @@ export class CreateCreditCardDto {
 	@Min(0)
 	interestRate!: number;
 
-	@ApiPropertyOptional({ example: 12, description: "Number of months without interest (promotional)", required: false })
+	@ApiPropertyOptional({
+		example: 12,
+		description: "Number of months without interest (promotional)",
+		required: false,
+	})
 	@IsOptional()
 	@Type(() => Number)
 	@IsInt()
@@ -117,4 +131,26 @@ export class CreditCardResponseDto {
 
 	@ApiProperty({ example: "2026-07-28T20:00:00.000Z", description: "Last update date" })
 	updatedAt!: Date;
+}
+
+export class QueryCreditCardsDto {
+	@ApiPropertyOptional({
+		enum: CreditCardSortBy,
+		example: "createdAt",
+		default: "createdAt",
+		description: "Sort field",
+	})
+	@IsOptional()
+	@IsEnum(CreditCardSortBy)
+	sortBy?: CreditCardSortBy;
+
+	@ApiPropertyOptional({
+		enum: SortOrder,
+		example: "desc",
+		default: "desc",
+		description: "Sort order",
+	})
+	@IsOptional()
+	@IsEnum(SortOrder)
+	order?: SortOrder;
 }

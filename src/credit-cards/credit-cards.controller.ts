@@ -1,9 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { Profile } from "../generated/prisma/client";
-import { CreditCardResponseDto, CreateCreditCardDto, UpdateCreditCardDto } from "./dto/credit-card.dto";
 import { CreditCardsService } from "./credit-cards.service";
+import {
+	CreateCreditCardDto,
+	CreditCardResponseDto,
+	QueryCreditCardsDto,
+	UpdateCreditCardDto,
+} from "./dto/credit-card.dto";
 
 @ApiTags("credit-cards")
 @ApiBearerAuth()
@@ -12,10 +17,17 @@ export class CreditCardsController {
 	constructor(private readonly creditCardsService: CreditCardsService) {}
 
 	@Get()
-	@ApiOperation({ summary: "List all credit cards for the current user" })
-	@ApiResponse({ status: 200, description: "Returns array of credit cards", type: [CreditCardResponseDto] })
-	async findAll(@CurrentUser() profile: Profile) {
-		return this.creditCardsService.findAllByProfile(profile.id);
+	@ApiOperation({ summary: "List all credit cards for the current user with optional sort" })
+	@ApiResponse({
+		status: 200,
+		description: "Returns array of credit cards",
+		type: [CreditCardResponseDto],
+	})
+	async findAll(@CurrentUser() profile: Profile, @Query() query: QueryCreditCardsDto) {
+		return this.creditCardsService.findAllByProfile(profile.id, {
+			sortBy: query.sortBy,
+			order: query.order,
+		});
 	}
 
 	@Get(":id")
@@ -28,7 +40,11 @@ export class CreditCardsController {
 
 	@Post()
 	@ApiOperation({ summary: "Create credit card details for a CREDIT account" })
-	@ApiResponse({ status: 201, description: "Returns the created credit card", type: CreditCardResponseDto })
+	@ApiResponse({
+		status: 201,
+		description: "Returns the created credit card",
+		type: CreditCardResponseDto,
+	})
 	@ApiResponse({ status: 400, description: "Account must be CREDIT type or already has a card" })
 	@ApiResponse({ status: 404, description: "Account not found" })
 	async create(@CurrentUser() profile: Profile, @Body() dto: CreateCreditCardDto) {
@@ -37,7 +53,11 @@ export class CreditCardsController {
 
 	@Patch(":id")
 	@ApiOperation({ summary: "Update a credit card by ID" })
-	@ApiResponse({ status: 200, description: "Returns the updated credit card", type: CreditCardResponseDto })
+	@ApiResponse({
+		status: 200,
+		description: "Returns the updated credit card",
+		type: CreditCardResponseDto,
+	})
 	@ApiResponse({ status: 404, description: "Credit card not found" })
 	async update(
 		@Param("id") id: string,

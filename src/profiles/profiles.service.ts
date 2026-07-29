@@ -157,9 +157,7 @@ export class ProfilesService {
 		return Math.round(total * 100) / 100;
 	}
 
-	async validateOnboarding(
-		profile: Profile,
-	): Promise<{ valid: boolean; missingFields: string[] }> {
+	async validateOnboarding(profile: Profile): Promise<{ valid: boolean; missingFields: string[] }> {
 		const missingFields: string[] = [];
 
 		for (const field of ONBOARDING_REQUIRED_FIELDS) {

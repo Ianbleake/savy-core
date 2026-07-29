@@ -1,5 +1,4 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import type { Prisma } from "../generated/prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateBankDto, UpdateBankDto } from "./dto/bank.dto";
 
@@ -7,10 +6,20 @@ import { CreateBankDto, UpdateBankDto } from "./dto/bank.dto";
 export class BanksService {
 	constructor(private readonly prisma: PrismaService) {}
 
-	async findAllByProfile(profileId: string) {
+	async findAllByProfile(
+		profileId: string,
+		filters?: {
+			isActive?: boolean;
+			sortBy?: "name" | "createdAt";
+			order?: "asc" | "desc";
+		},
+	) {
+		const sortBy = filters?.sortBy ?? "name";
+		const order = filters?.order ?? "asc";
+		const isActive = filters?.isActive === undefined ? true : filters.isActive;
 		return this.prisma.bank.findMany({
-			where: { profileId, isActive: true },
-			orderBy: { createdAt: "desc" },
+			where: { profileId, isActive },
+			orderBy: { [sortBy]: order },
 		});
 	}
 

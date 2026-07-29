@@ -7,10 +7,18 @@ import { CreateLoanDto, UpdateLoanDto } from "./dto/loan.dto";
 export class LoansService {
 	constructor(private readonly prisma: PrismaService) {}
 
-	async findAllByProfile(profileId: string): Promise<Loan[]> {
+	async findAllByProfile(
+		profileId: string,
+		filters?: {
+			sortBy?: "createdAt" | "remaining" | "principal";
+			order?: "asc" | "desc";
+		},
+	): Promise<Loan[]> {
+		const sortBy = filters?.sortBy ?? "createdAt";
+		const order = filters?.order ?? "desc";
 		return this.prisma.loan.findMany({
 			where: { account: { profileId } },
-			orderBy: { createdAt: "desc" },
+			orderBy: { [sortBy]: order },
 		});
 	}
 

@@ -1,14 +1,27 @@
-import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { Type } from "class-transformer";
 import {
 	IsBoolean,
+	IsBooleanString,
 	IsDateString,
+	IsEnum,
 	IsNotEmpty,
 	IsNumber,
 	IsOptional,
 	IsString,
 	Min,
 } from "class-validator";
+
+enum CardStatementSortBy {
+	periodEnd = "periodEnd",
+	balance = "balance",
+	createdAt = "createdAt",
+}
+
+enum SortOrder {
+	asc = "asc",
+	desc = "desc",
+}
 
 export class CreateCardStatementDto {
 	@ApiProperty({ example: "credit-card-uuid", description: "Credit card ID" })
@@ -36,7 +49,10 @@ export class CreateCardStatementDto {
 	@Min(0)
 	minPayment!: number;
 
-	@ApiProperty({ example: 15000, description: "No-interest payment (full balance to avoid interest)" })
+	@ApiProperty({
+		example: 15000,
+		description: "No-interest payment (full balance to avoid interest)",
+	})
 	@Type(() => Number)
 	@IsNumber()
 	@Min(0)
@@ -115,4 +131,39 @@ export class CardStatementResponseDto {
 
 	@ApiProperty({ example: "2026-07-28T20:00:00.000Z", description: "Creation date" })
 	createdAt!: Date;
+}
+
+export class QueryCardStatementsDto {
+	@ApiPropertyOptional({ example: "credit-card-uuid", description: "Filter by credit card" })
+	@IsOptional()
+	@IsString()
+	creditCardId?: string;
+
+	@ApiPropertyOptional({
+		example: "false",
+		description: 'Filter by paid state (accepts "true"/"false")',
+	})
+	@IsOptional()
+	@IsBooleanString()
+	isPaid?: string;
+
+	@ApiPropertyOptional({
+		enum: CardStatementSortBy,
+		example: "createdAt",
+		default: "createdAt",
+		description: "Sort field",
+	})
+	@IsOptional()
+	@IsEnum(CardStatementSortBy)
+	sortBy?: CardStatementSortBy;
+
+	@ApiPropertyOptional({
+		enum: SortOrder,
+		example: "desc",
+		default: "desc",
+		description: "Sort order",
+	})
+	@IsOptional()
+	@IsEnum(SortOrder)
+	order?: SortOrder;
 }

@@ -1,8 +1,8 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { Profile } from "../generated/prisma/client";
-import { CreateLoanDto, LoanResponseDto, UpdateLoanDto } from "./dto/loan.dto";
+import { CreateLoanDto, LoanResponseDto, QueryLoansDto, UpdateLoanDto } from "./dto/loan.dto";
 import { LoansService } from "./loans.service";
 
 @ApiTags("loans")
@@ -12,10 +12,13 @@ export class LoansController {
 	constructor(private readonly loansService: LoansService) {}
 
 	@Get()
-	@ApiOperation({ summary: "List all loans for the current user" })
+	@ApiOperation({ summary: "List all loans for the current user with optional sort" })
 	@ApiResponse({ status: 200, description: "Returns array of loans", type: [LoanResponseDto] })
-	async findAll(@CurrentUser() profile: Profile) {
-		return this.loansService.findAllByProfile(profile.id);
+	async findAll(@CurrentUser() profile: Profile, @Query() query: QueryLoansDto) {
+		return this.loansService.findAllByProfile(profile.id, {
+			sortBy: query.sortBy,
+			order: query.order,
+		});
 	}
 
 	@Get(":id")

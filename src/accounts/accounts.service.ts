@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import type { Account } from "../generated/prisma/client";
+import type { Account, AccountType } from "../generated/prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateAccountDto, UpdateAccountDto } from "./dto/account.dto";
 
@@ -7,10 +7,29 @@ import { CreateAccountDto, UpdateAccountDto } from "./dto/account.dto";
 export class AccountsService {
 	constructor(private readonly prisma: PrismaService) {}
 
-	async findAllByProfile(profileId: string): Promise<Account[]> {
+	async findAllByProfile(
+		profileId: string,
+		filters?: {
+			type?: AccountType;
+			bankId?: string;
+			isActive?: boolean;
+			sortBy?: "balance" | "name" | "createdAt";
+			order?: "asc" | "desc";
+		},
+	): Promise<Account[]> {
+		const sortBy = filters?.sortBy ?? "createdAt";
+		const order = filters?.order ?? "desc";
+		// Default to active accounts unless the caller explicitly requests inactive
+		const isActive = filters?.isActive === undefined ? true : filters.isActive;
+
 		return this.prisma.account.findMany({
-			where: { profileId, isActive: true },
-			orderBy: { createdAt: "desc" },
+			where: {
+				profileId,
+				isActive,
+				...(filters?.type ? { type: filters.type } : {}),
+				...(filters?.bankId ? { bankId: filters.bankId } : {}),
+			},
+			orderBy: { [sortBy]: order },
 		});
 	}
 

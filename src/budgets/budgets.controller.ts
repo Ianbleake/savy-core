@@ -1,14 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { Profile } from "../generated/prisma/client";
+import { BudgetsService } from "./budgets.service";
 import {
 	BudgetProgressDto,
 	BudgetResponseDto,
 	CreateBudgetDto,
+	QueryBudgetsDto,
 	UpdateBudgetDto,
 } from "./dto/budget.dto";
-import { BudgetsService } from "./budgets.service";
 
 @ApiTags("budgets")
 @ApiBearerAuth()
@@ -17,10 +18,15 @@ export class BudgetsController {
 	constructor(private readonly budgetsService: BudgetsService) {}
 
 	@Get()
-	@ApiOperation({ summary: "List all active budgets for the current user" })
+	@ApiOperation({ summary: "List all budgets for the current user with optional filters" })
 	@ApiResponse({ status: 200, description: "Returns array of budgets", type: [BudgetResponseDto] })
-	async findAll(@CurrentUser() profile: Profile) {
-		return this.budgetsService.findAllByProfile(profile.id);
+	async findAll(@CurrentUser() profile: Profile, @Query() query: QueryBudgetsDto) {
+		return this.budgetsService.findAllByProfile(profile.id, {
+			isActive: query.isActive === undefined ? undefined : query.isActive === "true",
+			period: query.period,
+			sortBy: query.sortBy,
+			order: query.order,
+		});
 	}
 
 	@Get(":id")
@@ -33,7 +39,11 @@ export class BudgetsController {
 
 	@Get(":id/progress")
 	@ApiOperation({ summary: "Get budget progress for the current cycle (spent vs budget)" })
-	@ApiResponse({ status: 200, description: "Returns spent, remaining, percentage, and current cycle dates", type: BudgetProgressDto })
+	@ApiResponse({
+		status: 200,
+		description: "Returns spent, remaining, percentage, and current cycle dates",
+		type: BudgetProgressDto,
+	})
 	@ApiResponse({ status: 404, description: "Budget not found" })
 	async getProgress(@Param("id") id: string, @CurrentUser() profile: Profile) {
 		return this.budgetsService.getProgress(id, profile.id);

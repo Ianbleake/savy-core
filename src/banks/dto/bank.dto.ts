@@ -1,5 +1,22 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from "class-validator";
+import {
+	IsBooleanString,
+	IsEnum,
+	IsNotEmpty,
+	IsOptional,
+	IsString,
+	MaxLength,
+} from "class-validator";
+
+enum BankSortBy {
+	name = "name",
+	createdAt = "createdAt",
+}
+
+enum SortOrder {
+	asc = "asc",
+	desc = "desc",
+}
 
 export class CreateBankDto {
 	@ApiProperty({ example: "BBVA", description: "Bank display name" })
@@ -13,7 +30,11 @@ export class CreateBankDto {
 	@IsString()
 	color?: string;
 
-	@ApiPropertyOptional({ example: "bbva-logo", description: "Logo identifier or URL", required: false })
+	@ApiPropertyOptional({
+		example: "bbva-logo",
+		description: "Logo identifier or URL",
+		required: false,
+	})
 	@IsOptional()
 	@IsString()
 	logo?: string;
@@ -32,7 +53,11 @@ export class UpdateBankDto {
 	@IsString()
 	color?: string;
 
-	@ApiPropertyOptional({ example: "bbva-logo", description: "Logo identifier or URL", required: false })
+	@ApiPropertyOptional({
+		example: "bbva-logo",
+		description: "Logo identifier or URL",
+		required: false,
+	})
 	@IsOptional()
 	@IsString()
 	logo?: string;
@@ -62,4 +87,34 @@ export class BankResponseDto {
 
 	@ApiProperty({ example: "2026-07-28T07:06:12.000Z", description: "Last update date" })
 	updatedAt!: Date;
+}
+
+export class QueryBanksDto {
+	@ApiPropertyOptional({
+		example: "true",
+		description: 'Filter by active state (accepts "true"/"false"). Defaults to true.',
+	})
+	@IsOptional()
+	@IsBooleanString()
+	isActive?: string;
+
+	@ApiPropertyOptional({
+		enum: BankSortBy,
+		example: "name",
+		default: "name",
+		description: "Sort field",
+	})
+	@IsOptional()
+	@IsEnum(BankSortBy)
+	sortBy?: BankSortBy;
+
+	@ApiPropertyOptional({
+		enum: SortOrder,
+		example: "asc",
+		default: "asc",
+		description: "Sort order",
+	})
+	@IsOptional()
+	@IsEnum(SortOrder)
+	order?: SortOrder;
 }

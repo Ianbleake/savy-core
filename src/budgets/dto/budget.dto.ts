@@ -1,6 +1,7 @@
-import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { Type } from "class-transformer";
 import {
+	IsBooleanString,
 	IsDateString,
 	IsEnum,
 	IsNotEmpty,
@@ -15,6 +16,16 @@ enum BudgetPeriod {
 	BIWEEKLY = "BIWEEKLY",
 	MONTHLY = "MONTHLY",
 	YEARLY = "YEARLY",
+}
+
+enum BudgetSortBy {
+	amount = "amount",
+	startDate = "startDate",
+}
+
+enum SortOrder {
+	asc = "asc",
+	desc = "desc",
 }
 
 export class CreateBudgetDto {
@@ -37,18 +48,27 @@ export class CreateBudgetDto {
 	@IsEnum(BudgetPeriod)
 	period!: BudgetPeriod;
 
-	@ApiProperty({ example: "2026-01-15T00:00:00.000Z", description: "Start date of the first cycle" })
+	@ApiProperty({
+		example: "2026-01-15T00:00:00.000Z",
+		description: "Start date of the first cycle",
+	})
 	@IsDateString()
 	startDate!: string;
 
-	@ApiPropertyOptional({ example: "2026-12-31T00:00:00.000Z", description: "Optional end date for temporary budgets" })
+	@ApiPropertyOptional({
+		example: "2026-12-31T00:00:00.000Z",
+		description: "Optional end date for temporary budgets",
+	})
 	@IsOptional()
 	@IsDateString()
 	endDate?: string;
 }
 
 export class UpdateBudgetDto {
-	@ApiPropertyOptional({ example: "category-uuid", description: "Category ID (must be EXPENSE type)" })
+	@ApiPropertyOptional({
+		example: "category-uuid",
+		description: "Category ID (must be EXPENSE type)",
+	})
 	@IsOptional()
 	@IsString()
 	@IsNotEmpty()
@@ -66,7 +86,10 @@ export class UpdateBudgetDto {
 	@IsEnum(BudgetPeriod)
 	period?: BudgetPeriod;
 
-	@ApiPropertyOptional({ example: "2026-01-15T00:00:00.000Z", description: "Start date of the first cycle" })
+	@ApiPropertyOptional({
+		example: "2026-01-15T00:00:00.000Z",
+		description: "Start date of the first cycle",
+	})
 	@IsOptional()
 	@IsDateString()
 	startDate?: string;
@@ -127,4 +150,43 @@ export class BudgetProgressDto {
 
 	@ApiProperty({ example: "2026-08-14T23:59:59.999Z", description: "Current cycle end date" })
 	periodEnd!: Date;
+}
+
+export class QueryBudgetsDto {
+	@ApiPropertyOptional({
+		example: "true",
+		description: 'Filter by active state (accepts "true"/"false"). Defaults to true.',
+	})
+	@IsOptional()
+	@IsBooleanString()
+	isActive?: string;
+
+	@ApiPropertyOptional({
+		enum: BudgetPeriod,
+		example: "MONTHLY",
+		description: "Filter by budget period",
+	})
+	@IsOptional()
+	@IsEnum(BudgetPeriod)
+	period?: BudgetPeriod;
+
+	@ApiPropertyOptional({
+		enum: BudgetSortBy,
+		example: "startDate",
+		default: "startDate",
+		description: "Sort field",
+	})
+	@IsOptional()
+	@IsEnum(BudgetSortBy)
+	sortBy?: BudgetSortBy;
+
+	@ApiPropertyOptional({
+		enum: SortOrder,
+		example: "desc",
+		default: "desc",
+		description: "Sort order",
+	})
+	@IsOptional()
+	@IsEnum(SortOrder)
+	order?: SortOrder;
 }

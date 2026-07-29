@@ -1,14 +1,5 @@
-import {
-	BadRequestException,
-	Injectable,
-	NotFoundException,
-} from "@nestjs/common";
-import type {
-	Account,
-	Prisma,
-	Transaction,
-	TransactionType,
-} from "../generated/prisma/client";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import type { Account, Prisma, Transaction, TransactionType } from "../generated/prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateTransactionDto, UpdateTransactionDto } from "./dto/transaction.dto";
 
@@ -22,42 +13,64 @@ export class TransactionsService {
 			accountId?: string;
 			type?: TransactionType;
 			categoryId?: string;
+			bankId?: string;
+			search?: string;
 			from?: Date;
 			to?: Date;
 			page?: number;
 			limit?: number;
+			sortBy?: "date" | "amount" | "createdAt";
+			order?: "asc" | "desc";
 		},
-	): Promise<{ data: Transaction[]; total: number; page: number; limit: number }> {
+	): Promise<{
+		data: Transaction[];
+		total: number;
+		page: number;
+		limit: number;
+		totalPages: number;
+	}> {
 		const page = filters.page ?? 1;
 		const limit = Math.min(filters.limit ?? 50, 100);
 		const skip = (page - 1) * limit;
+		const sortBy = filters.sortBy ?? "date";
+		const order = filters.order ?? "desc";
 
 		// Find all accounts owned by the profile (source or destination)
-		const accountIds = await this.prisma.account
+		const ownedAccountIds = await this.prisma.account
 			.findMany({
 				where: { profileId },
 				select: { id: true },
 			})
 			.then((accounts) => accounts.map((a) => a.id));
 
+		// If a bank filter is provided, intersect owned accounts with those of the bank
+		let scopedAccountIds = ownedAccountIds;
+		if (filters.bankId) {
+			const bankAccountIds = await this.prisma.account
+				.findMany({
+					where: { profileId, bankId: filters.bankId },
+					select: { id: true },
+				})
+				.then((accounts) => accounts.map((a) => a.id));
+			scopedAccountIds = ownedAccountIds.filter((id) => bankAccountIds.includes(id));
+		}
+
 		const where: Prisma.TransactionWhereInput = {
 			AND: [
 				{
 					OR: [
-						{ accountId: { in: accountIds } },
-						{ destinationAccountId: { in: accountIds } },
+						{ accountId: { in: scopedAccountIds } },
+						{ destinationAccountId: { in: scopedAccountIds } },
 					],
 				},
 				filters.accountId
 					? {
-							OR: [
-								{ accountId: filters.accountId },
-								{ destinationAccountId: filters.accountId },
-							],
+							OR: [{ accountId: filters.accountId }, { destinationAccountId: filters.accountId }],
 						}
 					: {},
 				filters.type ? { type: filters.type } : {},
 				filters.categoryId ? { categoryId: filters.categoryId } : {},
+				filters.search ? { description: { contains: filters.search, mode: "insensitive" } } : {},
 				filters.from || filters.to
 					? {
 							date: {
@@ -74,22 +87,21 @@ export class TransactionsService {
 				where,
 				skip,
 				take: limit,
-				orderBy: { date: "desc" },
+				orderBy: { [sortBy]: order },
 			}),
 			this.prisma.transaction.count({ where }),
 		]);
 
-		return { data, total, page, limit };
+		const totalPages = limit > 0 ? Math.ceil(total / limit) : 0;
+
+		return { data, total, page, limit, totalPages };
 	}
 
 	async findOne(id: string, profileId: string): Promise<Transaction> {
 		const transaction = await this.prisma.transaction.findFirst({
 			where: {
 				id,
-				OR: [
-					{ account: { profileId } },
-					{ destinationAccount: { profileId } },
-				],
+				OR: [{ account: { profileId } }, { destinationAccount: { profileId } }],
 			},
 		});
 		if (!transaction) {
@@ -100,11 +112,7 @@ export class TransactionsService {
 
 	async create(profileId: string, dto: CreateTransactionDto): Promise<Transaction> {
 		return this.prisma.$transaction(async (tx) => {
-			const account = await this.validateAccountOwnership(
-				tx,
-				dto.accountId,
-				profileId,
-			);
+			await this.validateAccountOwnership(tx, dto.accountId, profileId);
 			this.validateTypeRules(dto.type, dto.destinationAccountId);
 
 			let destinationAccount: Account | null = null;
@@ -132,17 +140,20 @@ export class TransactionsService {
 				},
 			});
 
-			await this.applyBalance(tx, dto.type, dto.accountId, dto.destinationAccountId ?? null, dto.amount, 1);
+			await this.applyBalance(
+				tx,
+				dto.type,
+				dto.accountId,
+				dto.destinationAccountId ?? null,
+				dto.amount,
+				1,
+			);
 
 			return transaction;
 		});
 	}
 
-	async update(
-		id: string,
-		profileId: string,
-		dto: UpdateTransactionDto,
-	): Promise<Transaction> {
+	async update(id: string, profileId: string, dto: UpdateTransactionDto): Promise<Transaction> {
 		return this.prisma.$transaction(async (tx) => {
 			const existing = await this.findOne(id, profileId);
 
@@ -164,11 +175,10 @@ export class TransactionsService {
 					: existing.destinationAccountId;
 			const type = dto.type ?? existing.type;
 			const amount = dto.amount ?? Number(existing.amount);
-			const categoryId =
-				dto.categoryId !== undefined ? dto.categoryId : existing.categoryId;
+			const categoryId = dto.categoryId !== undefined ? dto.categoryId : existing.categoryId;
 
 			// Validate new values
-			const account = await this.validateAccountOwnership(tx, accountId, profileId);
+			await this.validateAccountOwnership(tx, accountId, profileId);
 			this.validateTypeRules(type, destinationAccountId);
 
 			let destinationAccount: Account | null = null;
@@ -257,32 +267,16 @@ export class TransactionsService {
 		}
 	}
 
-	private validateTypeRules(
-		type: TransactionType,
-		destinationAccountId?: string | null,
-	): void {
-		if (
-			(type === "INCOME" || type === "EXPENSE") &&
-			destinationAccountId
-		) {
-			throw new BadRequestException(
-				`destinationAccountId must be null for ${type} transactions`,
-			);
+	private validateTypeRules(type: TransactionType, destinationAccountId?: string | null): void {
+		if ((type === "INCOME" || type === "EXPENSE") && destinationAccountId) {
+			throw new BadRequestException(`destinationAccountId must be null for ${type} transactions`);
 		}
-		if (
-			(type === "TRANSFER" || type === "PAYMENT") &&
-			!destinationAccountId
-		) {
-			throw new BadRequestException(
-				`destinationAccountId is required for ${type} transactions`,
-			);
+		if ((type === "TRANSFER" || type === "PAYMENT") && !destinationAccountId) {
+			throw new BadRequestException(`destinationAccountId is required for ${type} transactions`);
 		}
 	}
 
-	private validateDestinationType(
-		type: TransactionType,
-		destType: string,
-	): void {
+	private validateDestinationType(type: TransactionType, destType: string): void {
 		if (type === "TRANSFER") {
 			if (!["DEBIT", "CASH"].includes(destType)) {
 				throw new BadRequestException(
@@ -327,8 +321,7 @@ export class TransactionsService {
 			throw new NotFoundException("Category not found");
 		}
 
-		const expectedType =
-			type === "INCOME" ? "INCOME" : "EXPENSE";
+		const expectedType = type === "INCOME" ? "INCOME" : "EXPENSE";
 		if (category.type !== expectedType) {
 			throw new BadRequestException(
 				`Category type ${category.type} does not match transaction type ${type}`,

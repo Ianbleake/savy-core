@@ -6,6 +6,16 @@ enum CategoryType {
 	EXPENSE = "EXPENSE",
 }
 
+enum CategorySortBy {
+	name = "name",
+	createdAt = "createdAt",
+}
+
+enum SortOrder {
+	asc = "asc",
+	desc = "desc",
+}
+
 export class CreateCategoryDto {
 	@ApiProperty({ example: "Salario", description: "Category display name" })
 	@IsString()
@@ -72,4 +82,35 @@ export class CategoryResponseDto {
 
 	@ApiProperty({ example: "2026-07-28T07:06:12.000Z", description: "Creation date" })
 	createdAt!: Date;
+}
+
+export class QueryCategoriesDto {
+	@ApiPropertyOptional({
+		enum: CategoryType,
+		example: "INCOME",
+		description: "Filter by category type",
+	})
+	@IsOptional()
+	@IsEnum(CategoryType)
+	type?: CategoryType;
+
+	@ApiPropertyOptional({
+		enum: CategorySortBy,
+		example: "createdAt",
+		default: "createdAt",
+		description: "Sort field",
+	})
+	@IsOptional()
+	@IsEnum(CategorySortBy)
+	sortBy?: CategorySortBy;
+
+	@ApiPropertyOptional({
+		enum: SortOrder,
+		example: "desc",
+		default: "desc",
+		description: "Sort order",
+	})
+	@IsOptional()
+	@IsEnum(SortOrder)
+	order?: SortOrder;
 }

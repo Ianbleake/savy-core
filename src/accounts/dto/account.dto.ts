@@ -1,11 +1,29 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from "class-validator";
+import {
+	IsBooleanString,
+	IsEnum,
+	IsNotEmpty,
+	IsNumber,
+	IsOptional,
+	IsString,
+} from "class-validator";
 
 enum AccountType {
 	DEBIT = "DEBIT",
 	CREDIT = "CREDIT",
 	LOAN = "LOAN",
 	CASH = "CASH",
+}
+
+enum AccountSortBy {
+	balance = "balance",
+	name = "name",
+	createdAt = "createdAt",
+}
+
+enum SortOrder {
+	asc = "asc",
+	desc = "desc",
 }
 
 export class CreateAccountDto {
@@ -116,4 +134,48 @@ export class AccountResponseDto {
 
 	@ApiProperty({ example: "2026-07-28T07:06:12.000Z", description: "Last update date" })
 	updatedAt!: Date;
+}
+
+export class QueryAccountsDto {
+	@ApiPropertyOptional({
+		enum: AccountType,
+		example: "DEBIT",
+		description: "Filter by account type",
+	})
+	@IsOptional()
+	@IsEnum(AccountType)
+	type?: AccountType;
+
+	@ApiPropertyOptional({ example: "bank-uuid", description: "Filter by bank" })
+	@IsOptional()
+	@IsString()
+	bankId?: string;
+
+	@ApiPropertyOptional({
+		example: "true",
+		description: 'Filter by active state (accepts "true"/"false")',
+	})
+	@IsOptional()
+	@IsBooleanString()
+	isActive?: string;
+
+	@ApiPropertyOptional({
+		enum: AccountSortBy,
+		example: "createdAt",
+		default: "createdAt",
+		description: "Sort field",
+	})
+	@IsOptional()
+	@IsEnum(AccountSortBy)
+	sortBy?: AccountSortBy;
+
+	@ApiPropertyOptional({
+		enum: SortOrder,
+		example: "desc",
+		default: "desc",
+		description: "Sort order",
+	})
+	@IsOptional()
+	@IsEnum(SortOrder)
+	order?: SortOrder;
 }

@@ -1,13 +1,14 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { Profile } from "../generated/prisma/client";
+import { CardStatementsService } from "./card-statements.service";
 import {
 	CardStatementResponseDto,
 	CreateCardStatementDto,
+	QueryCardStatementsDto,
 	UpdateCardStatementDto,
 } from "./dto/card-statement.dto";
-import { CardStatementsService } from "./card-statements.service";
 
 @ApiTags("card-statements")
 @ApiBearerAuth()
@@ -16,19 +17,28 @@ export class CardStatementsController {
 	constructor(private readonly cardStatementsService: CardStatementsService) {}
 
 	@Get()
-	@ApiOperation({ summary: "List all card statements for the current user" })
-	@ApiQuery({ name: "creditCardId", required: false, description: "Filter by credit card" })
-	@ApiResponse({ status: 200, description: "Returns array of card statements", type: [CardStatementResponseDto] })
-	async findAll(
-		@CurrentUser() profile: Profile,
-		@Query("creditCardId") creditCardId?: string,
-	) {
-		return this.cardStatementsService.findAllByProfile(profile.id, creditCardId);
+	@ApiOperation({ summary: "List all card statements for the current user with optional filters" })
+	@ApiResponse({
+		status: 200,
+		description: "Returns array of card statements",
+		type: [CardStatementResponseDto],
+	})
+	async findAll(@CurrentUser() profile: Profile, @Query() query: QueryCardStatementsDto) {
+		return this.cardStatementsService.findAllByProfile(profile.id, {
+			creditCardId: query.creditCardId,
+			isPaid: query.isPaid === undefined ? undefined : query.isPaid === "true",
+			sortBy: query.sortBy,
+			order: query.order,
+		});
 	}
 
 	@Get(":id")
 	@ApiOperation({ summary: "Get a single card statement by ID" })
-	@ApiResponse({ status: 200, description: "Returns the card statement", type: CardStatementResponseDto })
+	@ApiResponse({
+		status: 200,
+		description: "Returns the card statement",
+		type: CardStatementResponseDto,
+	})
 	@ApiResponse({ status: 404, description: "Card statement not found" })
 	async findOne(@Param("id") id: string, @CurrentUser() profile: Profile) {
 		return this.cardStatementsService.findOne(id, profile.id);
@@ -36,7 +46,11 @@ export class CardStatementsController {
 
 	@Post()
 	@ApiOperation({ summary: "Create a new card statement" })
-	@ApiResponse({ status: 201, description: "Returns the created card statement", type: CardStatementResponseDto })
+	@ApiResponse({
+		status: 201,
+		description: "Returns the created card statement",
+		type: CardStatementResponseDto,
+	})
 	@ApiResponse({ status: 404, description: "Credit card not found" })
 	async create(@CurrentUser() profile: Profile, @Body() dto: CreateCardStatementDto) {
 		return this.cardStatementsService.create(profile.id, dto);
@@ -44,7 +58,11 @@ export class CardStatementsController {
 
 	@Patch(":id")
 	@ApiOperation({ summary: "Update a card statement (mark as paid, adjust amounts)" })
-	@ApiResponse({ status: 200, description: "Returns the updated card statement", type: CardStatementResponseDto })
+	@ApiResponse({
+		status: 200,
+		description: "Returns the updated card statement",
+		type: CardStatementResponseDto,
+	})
 	@ApiResponse({ status: 404, description: "Card statement not found" })
 	async update(
 		@Param("id") id: string,

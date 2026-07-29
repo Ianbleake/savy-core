@@ -28,10 +28,20 @@ const VALID_DESTINATION_TYPES: AccountType[] = ["DEBIT", "CASH"];
 export class IncomeSourcesService {
 	constructor(private readonly prisma: PrismaService) {}
 
-	async findAllByProfile(profileId: string): Promise<IncomeSource[]> {
+	async findAllByProfile(
+		profileId: string,
+		filters?: {
+			isActive?: boolean;
+			sortBy?: "name" | "amount" | "createdAt";
+			order?: "asc" | "desc";
+		},
+	): Promise<IncomeSource[]> {
+		const sortBy = filters?.sortBy ?? "createdAt";
+		const order = filters?.order ?? "desc";
+		const isActive = filters?.isActive === undefined ? true : filters.isActive;
 		return this.prisma.incomeSource.findMany({
-			where: { profileId, isActive: true },
-			orderBy: { createdAt: "desc" },
+			where: { profileId, isActive },
+			orderBy: { [sortBy]: order },
 		});
 	}
 
@@ -108,9 +118,7 @@ export class IncomeSourcesService {
 				forbidNonWhitelisted: true,
 			});
 
-			const decoratorMessages = decoratorErrors.flatMap((e) =>
-				Object.values(e.constraints ?? {}),
-			);
+			const decoratorMessages = decoratorErrors.flatMap((e) => Object.values(e.constraints ?? {}));
 
 			const paydayErrors =
 				instance.frequency && instance.paydays
@@ -161,11 +169,7 @@ export class IncomeSourcesService {
 
 		const total = sources.length;
 		const creationState: BulkCreateResult["creationState"] =
-			successful.length === total
-				? "success"
-				: successful.length === 0
-					? "failed"
-					: "partial";
+			successful.length === total ? "success" : successful.length === 0 ? "failed" : "partial";
 
 		return { creationState, total, successful, failed };
 	}
@@ -190,10 +194,7 @@ export class IncomeSourcesService {
 	}
 
 	/** For single create/update: throws on invalid. */
-	private async validateDestinationAccount(
-		accountId: string,
-		profileId: string,
-	): Promise<void> {
+	private async validateDestinationAccount(accountId: string, profileId: string): Promise<void> {
 		const errors = await this.collectDestinationErrors(accountId, profileId);
 		if (errors.length > 0) {
 			throw new BadRequestException(errors);
@@ -201,10 +202,7 @@ export class IncomeSourcesService {
 	}
 
 	/** For bulk: returns errors instead of throwing. */
-	private async collectDestinationErrors(
-		accountId: string,
-		profileId: string,
-	): Promise<string[]> {
+	private async collectDestinationErrors(accountId: string, profileId: string): Promise<string[]> {
 		const account = await this.prisma.account.findFirst({
 			where: { id: accountId, profileId },
 			select: { id: true, type: true },
@@ -213,9 +211,7 @@ export class IncomeSourcesService {
 			return ["Destination account not found or does not belong to the user"];
 		}
 		if (!VALID_DESTINATION_TYPES.includes(account.type)) {
-			return [
-				`Destination account must be DEBIT or CASH, got ${account.type}`,
-			];
+			return [`Destination account must be DEBIT or CASH, got ${account.type}`];
 		}
 		return [];
 	}

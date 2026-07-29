@@ -1,9 +1,9 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { Profile } from "../generated/prisma/client";
-import { BankResponseDto, CreateBankDto, UpdateBankDto } from "./dto/bank.dto";
 import { BanksService } from "./banks.service";
+import { BankResponseDto, CreateBankDto, QueryBanksDto, UpdateBankDto } from "./dto/bank.dto";
 
 @ApiTags("banks")
 @ApiBearerAuth()
@@ -12,15 +12,22 @@ export class BanksController {
 	constructor(private readonly banksService: BanksService) {}
 
 	@Get()
-	@ApiOperation({ summary: "List all active banks for the current user" })
+	@ApiOperation({ summary: "List all banks for the current user with optional filters" })
 	@ApiResponse({ status: 200, description: "Returns array of banks", type: [BankResponseDto] })
-	async findAll(@CurrentUser() profile: Profile) {
-		return this.banksService.findAllByProfile(profile.id);
+	async findAll(@CurrentUser() profile: Profile, @Query() query: QueryBanksDto) {
+		return this.banksService.findAllByProfile(profile.id, {
+			isActive: query.isActive === undefined ? undefined : query.isActive === "true",
+			sortBy: query.sortBy,
+			order: query.order,
+		});
 	}
 
 	@Get(":id")
 	@ApiOperation({ summary: "Get a single bank by ID with its accounts (control center view)" })
-	@ApiResponse({ status: 200, description: "Returns the bank with nested accounts, credit cards, and loans" })
+	@ApiResponse({
+		status: 200,
+		description: "Returns the bank with nested accounts, credit cards, and loans",
+	})
 	@ApiResponse({ status: 404, description: "Bank not found" })
 	async findOne(@Param("id") id: string, @CurrentUser() profile: Profile) {
 		return this.banksService.findOne(id, profile.id);

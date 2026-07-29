@@ -1,7 +1,8 @@
-import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { Type } from "class-transformer";
 import {
 	IsDateString,
+	IsEnum,
 	IsInt,
 	IsNotEmpty,
 	IsNumber,
@@ -9,6 +10,17 @@ import {
 	IsString,
 	Min,
 } from "class-validator";
+
+enum LoanSortBy {
+	createdAt = "createdAt",
+	remaining = "remaining",
+	principal = "principal",
+}
+
+enum SortOrder {
+	asc = "asc",
+	desc = "desc",
+}
 
 export class CreateLoanDto {
 	@ApiProperty({ example: "account-uuid", description: "Account ID (must be type LOAN)" })
@@ -44,7 +56,11 @@ export class CreateLoanDto {
 	@Min(0)
 	monthlyPayment!: number;
 
-	@ApiPropertyOptional({ example: 185000, description: "Remaining balance (defaults to principal)", required: false })
+	@ApiPropertyOptional({
+		example: 185000,
+		description: "Remaining balance (defaults to principal)",
+		required: false,
+	})
 	@IsOptional()
 	@Type(() => Number)
 	@IsNumber()
@@ -112,4 +128,26 @@ export class LoanResponseDto {
 
 	@ApiProperty({ example: "2026-07-28T20:00:00.000Z", description: "Last update date" })
 	updatedAt!: Date;
+}
+
+export class QueryLoansDto {
+	@ApiPropertyOptional({
+		enum: LoanSortBy,
+		example: "createdAt",
+		default: "createdAt",
+		description: "Sort field",
+	})
+	@IsOptional()
+	@IsEnum(LoanSortBy)
+	sortBy?: LoanSortBy;
+
+	@ApiPropertyOptional({
+		enum: SortOrder,
+		example: "desc",
+		default: "desc",
+		description: "Sort order",
+	})
+	@IsOptional()
+	@IsEnum(SortOrder)
+	order?: SortOrder;
 }

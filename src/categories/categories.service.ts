@@ -9,11 +9,17 @@ export class CategoriesService {
 
 	async findAllByProfile(
 		profileId: string,
-		type?: CategoryType,
+		filters?: {
+			type?: CategoryType;
+			sortBy?: "name" | "createdAt";
+			order?: "asc" | "desc";
+		},
 	): Promise<Category[]> {
+		const sortBy = filters?.sortBy ?? "createdAt";
+		const order = filters?.order ?? "desc";
 		return this.prisma.category.findMany({
-			where: { profileId, ...(type ? { type } : {}) },
-			orderBy: { createdAt: "desc" },
+			where: { profileId, ...(filters?.type ? { type: filters.type } : {}) },
+			orderBy: { [sortBy]: order },
 		});
 	}
 
@@ -40,9 +46,7 @@ export class CategoriesService {
 			});
 		} catch (error) {
 			if (this.isUniqueConstraintError(error)) {
-				throw new ConflictException(
-					`Category "${dto.name}" with type ${dto.type} already exists`,
-				);
+				throw new ConflictException(`Category "${dto.name}" with type ${dto.type} already exists`);
 			}
 			throw error;
 		}
@@ -58,9 +62,7 @@ export class CategoriesService {
 			});
 		} catch (error) {
 			if (this.isUniqueConstraintError(error)) {
-				throw new ConflictException(
-					`Category "${dto.name}" already exists for this type`,
-				);
+				throw new ConflictException(`Category "${dto.name}" already exists for this type`);
 			}
 			throw error;
 		}
