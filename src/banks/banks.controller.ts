@@ -4,6 +4,7 @@ import { CurrentUser } from "../auth/current-user.decorator";
 import type { Profile } from "../generated/prisma/client";
 import { BanksService } from "./banks.service";
 import { BankResponseDto, CreateBankDto, QueryBanksDto, UpdateBankDto } from "./dto/bank.dto";
+import { BankSummaryResponseDto, QueryBankSummaryDto } from "./dto/bank-summary.dto";
 
 @ApiTags("banks")
 @ApiBearerAuth()
@@ -20,6 +21,23 @@ export class BanksController {
 			sortBy: query.sortBy,
 			order: query.order,
 		});
+	}
+
+	@Get(":id/summary")
+	@ApiOperation({ summary: "Get bank financial summary" })
+	@ApiResponse({
+		status: 200,
+		description: "Returns the bank financial summary with KPIs, income/expenses, and loans",
+		type: BankSummaryResponseDto,
+	})
+	@ApiResponse({ status: 404, description: "Bank not found" })
+	@ApiResponse({ status: 422, description: "Invalid period value" })
+	async getSummary(
+		@Param("id") id: string,
+		@Query() query: QueryBankSummaryDto,
+		@CurrentUser() profile: Profile,
+	) {
+		return this.banksService.getSummary(id, profile, query.period ?? "month");
 	}
 
 	@Get(":id")
