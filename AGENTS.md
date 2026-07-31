@@ -15,6 +15,12 @@ Savy is a personal finance PWA. This repo is the **REST API** that handles all b
 - **Swagger**: https://savy-core.onrender.com/api/docs
 - **Platform**: Render (free tier, cold starts possible)
 
+### Project Planning
+
+All product decisions, entity design, behaviors, planned modules, and future ideas are documented in:
+
+**[`savy-planning.md`](./savy-planning.md)** — read this before planning or building any new feature. This is the central reference for what the system does and how it should work.
+
 ### Key relationships
 - Frontend repo: `savy-web` (https://github.com/Ianbleake/savy-web)
 - Frontend talks to this API only. No Supabase client in the frontend.
