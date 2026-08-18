@@ -1,10 +1,10 @@
 import { Body, Controller, Get, Headers, Post } from "@nestjs/common";
-import { ApiBearerAuth, ApiHeader, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiHeader, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
-	ApiErrorResponseDto,
-	ApiMessageResponseDto,
-	ApiSuccessResponseDto,
-} from "../common/dto/api-response.dto";
+	ApiErrorResponse,
+	ApiMessageResponse,
+	ApiSuccessResponse,
+} from "../common/decorators/api-response.decorator";
 import type { Profile } from "../generated/prisma/client";
 import { AuthService } from "./auth.service";
 import { CurrentUser } from "./current-user.decorator";
@@ -28,18 +28,14 @@ export class AuthController {
 	@Public()
 	@Post("login")
 	@ApiOperation({ summary: "Login with email and password" })
-	@ApiResponse({
-		status: 200,
-		description: "Returns access token, refresh token, and user identity",
-		type: ApiSuccessResponseDto<AuthResponseDto>,
-	})
-	@ApiResponse({
-		status: 400,
-		description: "Validation error or invalid request data",
-		type: ApiErrorResponseDto,
-	})
-	@ApiResponse({ status: 401, description: "Invalid credentials", type: ApiErrorResponseDto })
-	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
+	@ApiSuccessResponse(
+		200,
+		AuthResponseDto,
+		"Returns access token, refresh token, and user identity",
+	)
+	@ApiErrorResponse(400, "Validation error or invalid request data")
+	@ApiErrorResponse(401, "Invalid credentials")
+	@ApiErrorResponse(500, "Internal server error")
 	async login(@Body() dto: LoginDto) {
 		return this.authService.login(dto.email, dto.password);
 	}
@@ -47,18 +43,14 @@ export class AuthController {
 	@Public()
 	@Post("register")
 	@ApiOperation({ summary: "Register a new account" })
-	@ApiResponse({
-		status: 201,
-		description: "Returns access token, refresh token, and user identity",
-		type: ApiSuccessResponseDto<AuthResponseDto>,
-	})
-	@ApiResponse({
-		status: 400,
-		description: "Validation error or invalid request data",
-		type: ApiErrorResponseDto,
-	})
-	@ApiResponse({ status: 409, description: "Email already registered", type: ApiErrorResponseDto })
-	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
+	@ApiSuccessResponse(
+		201,
+		AuthResponseDto,
+		"Returns access token, refresh token, and user identity",
+	)
+	@ApiErrorResponse(400, "Validation error or invalid request data")
+	@ApiErrorResponse(409, "Email already registered")
+	@ApiErrorResponse(500, "Internal server error")
 	async register(@Body() dto: RegisterDto) {
 		return this.authService.register(dto.email, dto.password, dto.firstName, dto.lastName);
 	}
@@ -66,18 +58,10 @@ export class AuthController {
 	@Public()
 	@Post("refresh")
 	@ApiOperation({ summary: "Refresh access token" })
-	@ApiResponse({
-		status: 200,
-		description: "Returns new access and refresh tokens",
-		type: ApiSuccessResponseDto<AuthTokensDto>,
-	})
-	@ApiResponse({
-		status: 400,
-		description: "Validation error or invalid request data",
-		type: ApiErrorResponseDto,
-	})
-	@ApiResponse({ status: 401, description: "Invalid refresh token", type: ApiErrorResponseDto })
-	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
+	@ApiSuccessResponse(200, AuthTokensDto, "Returns new access and refresh tokens")
+	@ApiErrorResponse(400, "Validation error or invalid request data")
+	@ApiErrorResponse(401, "Invalid refresh token")
+	@ApiErrorResponse(500, "Internal server error")
 	async refresh(@Body() dto: RefreshDto) {
 		return this.authService.refresh(dto.refreshToken);
 	}
@@ -86,9 +70,9 @@ export class AuthController {
 	@ApiHeader({ name: "Authorization", description: "Bearer JWT token" })
 	@Post("logout")
 	@ApiOperation({ summary: "Logout and invalidate session" })
-	@ApiResponse({ status: 201, description: "Logged out successfully", type: ApiMessageResponseDto })
-	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
-	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
+	@ApiMessageResponse(201, "Logged out successfully")
+	@ApiErrorResponse(401, "Unauthorized")
+	@ApiErrorResponse(500, "Internal server error")
 	async logout(@Headers("authorization") auth: string) {
 		const token = auth?.replace("Bearer ", "");
 		await this.authService.logout(token);
@@ -98,17 +82,9 @@ export class AuthController {
 	@Public()
 	@Post("forgot-password")
 	@ApiOperation({ summary: "Request a password reset email" })
-	@ApiResponse({
-		status: 201,
-		description: "Reset link sent if email is registered",
-		type: ApiMessageResponseDto,
-	})
-	@ApiResponse({
-		status: 400,
-		description: "Validation error or invalid request data",
-		type: ApiErrorResponseDto,
-	})
-	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
+	@ApiMessageResponse(201, "Reset link sent if email is registered")
+	@ApiErrorResponse(400, "Validation error or invalid request data")
+	@ApiErrorResponse(500, "Internal server error")
 	async forgotPassword(@Body() dto: ForgotPasswordDto) {
 		await this.authService.forgotPassword(dto.email);
 		return { message: "If the email is registered, a reset link has been sent" };
@@ -117,22 +93,10 @@ export class AuthController {
 	@Public()
 	@Post("reset-password")
 	@ApiOperation({ summary: "Reset password using tokens from the email link" })
-	@ApiResponse({
-		status: 201,
-		description: "Password updated successfully",
-		type: ApiMessageResponseDto,
-	})
-	@ApiResponse({
-		status: 400,
-		description: "Validation error or invalid request data",
-		type: ApiErrorResponseDto,
-	})
-	@ApiResponse({
-		status: 401,
-		description: "Invalid or expired reset token",
-		type: ApiErrorResponseDto,
-	})
-	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
+	@ApiMessageResponse(201, "Password updated successfully")
+	@ApiErrorResponse(400, "Validation error or invalid request data")
+	@ApiErrorResponse(401, "Invalid or expired reset token")
+	@ApiErrorResponse(500, "Internal server error")
 	async resetPassword(@Body() dto: ResetPasswordDto) {
 		await this.authService.resetPassword(dto.accessToken, dto.refreshToken, dto.newPassword);
 		return { message: "Password updated successfully" };
@@ -141,13 +105,9 @@ export class AuthController {
 	@ApiBearerAuth()
 	@Get("me")
 	@ApiOperation({ summary: "Get current authenticated user identity" })
-	@ApiResponse({
-		status: 200,
-		description: "Returns user id and email",
-		type: ApiSuccessResponseDto<AuthIdentityDto>,
-	})
-	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
-	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
+	@ApiSuccessResponse(200, AuthIdentityDto, "Returns user id and email")
+	@ApiErrorResponse(401, "Unauthorized")
+	@ApiErrorResponse(500, "Internal server error")
 	async me(@CurrentUser() profile: Profile) {
 		return {
 			id: profile.id,

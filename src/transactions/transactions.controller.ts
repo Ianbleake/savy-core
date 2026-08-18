@@ -1,12 +1,20 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
+import {
+	ApiBearerAuth,
+	ApiExtraModels,
+	ApiOperation,
+	ApiQuery,
+	ApiResponse,
+	ApiTags,
+	getSchemaPath,
+} from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import {
-	ApiErrorResponseDto,
-	ApiMessageResponseDto,
-	ApiSuccessResponseDto,
-} from "../common/dto/api-response.dto";
-import { PaginatedResponseDto } from "../common/dto/pagination.dto";
+	ApiErrorResponse,
+	ApiMessageResponse,
+	ApiSuccessResponse,
+} from "../common/decorators/api-response.decorator";
+import { PaginationMetaDto } from "../common/dto/pagination.dto";
 import type { Profile } from "../generated/prisma/client";
 import {
 	CreateTransactionDto,
@@ -57,13 +65,30 @@ export class TransactionsController {
 		required: false,
 		description: "Sort order (default desc)",
 	})
+	@ApiExtraModels(TransactionResponseDto, PaginationMetaDto)
 	@ApiResponse({
 		status: 200,
 		description: "Returns paginated transactions",
-		type: ApiSuccessResponseDto<PaginatedResponseDto<TransactionResponseDto>>,
+		schema: {
+			type: "object",
+			properties: {
+				success: { type: "boolean", example: true },
+				data: {
+					type: "object",
+					properties: {
+						data: {
+							type: "array",
+							items: { $ref: getSchemaPath(TransactionResponseDto) },
+						},
+						meta: { $ref: getSchemaPath(PaginationMetaDto) },
+					},
+				},
+				message: { type: "string", nullable: true },
+			},
+		},
 	})
-	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
-	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
+	@ApiErrorResponse(401, "Unauthorized")
+	@ApiErrorResponse(500, "Internal server error")
 	async findAll(@CurrentUser() profile: Profile, @Query() query: QueryTransactionsDto) {
 		return this.transactionsService.findAllByProfile(profile.id, {
 			accountId: query.accountId,
@@ -82,57 +107,35 @@ export class TransactionsController {
 
 	@Get(":id")
 	@ApiOperation({ summary: "Get a single transaction by ID" })
-	@ApiResponse({
-		status: 200,
-		description: "Returns the transaction",
-		type: ApiSuccessResponseDto<TransactionResponseDto>,
-	})
-	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
-	@ApiResponse({ status: 404, description: "Transaction not found", type: ApiErrorResponseDto })
-	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
+	@ApiSuccessResponse(200, TransactionResponseDto, "Returns the transaction")
+	@ApiErrorResponse(401, "Unauthorized")
+	@ApiErrorResponse(404, "Transaction not found")
+	@ApiErrorResponse(500, "Internal server error")
 	async findOne(@Param("id") id: string, @CurrentUser() profile: Profile) {
 		return this.transactionsService.findOne(id, profile.id);
 	}
 
 	@Post()
 	@ApiOperation({ summary: "Create a new transaction (automatically updates account balances)" })
-	@ApiResponse({
-		status: 201,
-		description: "Returns the created transaction",
-		type: ApiSuccessResponseDto<TransactionResponseDto>,
-	})
-	@ApiResponse({
-		status: 400,
-		description:
-			"Validation error or invalid transaction rules (destination account, category type mismatch)",
-		type: ApiErrorResponseDto,
-	})
-	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
-	@ApiResponse({
-		status: 404,
-		description: "Account or category not found",
-		type: ApiErrorResponseDto,
-	})
-	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
+	@ApiSuccessResponse(201, TransactionResponseDto, "Returns the created transaction")
+	@ApiErrorResponse(
+		400,
+		"Validation error or invalid transaction rules (destination account, category type mismatch)",
+	)
+	@ApiErrorResponse(401, "Unauthorized")
+	@ApiErrorResponse(404, "Account or category not found")
+	@ApiErrorResponse(500, "Internal server error")
 	async create(@CurrentUser() profile: Profile, @Body() dto: CreateTransactionDto) {
 		return this.transactionsService.create(profile.id, dto);
 	}
 
 	@Patch(":id")
 	@ApiOperation({ summary: "Update a transaction (reverses old balance, applies new)" })
-	@ApiResponse({
-		status: 200,
-		description: "Returns the updated transaction",
-		type: ApiSuccessResponseDto<TransactionResponseDto>,
-	})
-	@ApiResponse({
-		status: 400,
-		description: "Validation error or invalid request data",
-		type: ApiErrorResponseDto,
-	})
-	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
-	@ApiResponse({ status: 404, description: "Transaction not found", type: ApiErrorResponseDto })
-	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
+	@ApiSuccessResponse(200, TransactionResponseDto, "Returns the updated transaction")
+	@ApiErrorResponse(400, "Validation error or invalid request data")
+	@ApiErrorResponse(401, "Unauthorized")
+	@ApiErrorResponse(404, "Transaction not found")
+	@ApiErrorResponse(500, "Internal server error")
 	async update(
 		@Param("id") id: string,
 		@CurrentUser() profile: Profile,
@@ -143,10 +146,10 @@ export class TransactionsController {
 
 	@Delete(":id")
 	@ApiOperation({ summary: "Delete a transaction (reverses balance effect)" })
-	@ApiResponse({ status: 200, description: "Transaction deleted", type: ApiMessageResponseDto })
-	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
-	@ApiResponse({ status: 404, description: "Transaction not found", type: ApiErrorResponseDto })
-	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
+	@ApiMessageResponse(200, "Transaction deleted")
+	@ApiErrorResponse(401, "Unauthorized")
+	@ApiErrorResponse(404, "Transaction not found")
+	@ApiErrorResponse(500, "Internal server error")
 	async remove(@Param("id") id: string, @CurrentUser() profile: Profile) {
 		await this.transactionsService.remove(id, profile.id);
 		return { message: "Transaction deleted" };

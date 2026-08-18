@@ -1,7 +1,7 @@
 import { Controller, Get } from "@nestjs/common";
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
-import { ApiErrorResponseDto, ApiSuccessResponseDto } from "../common/dto/api-response.dto";
+import { ApiErrorResponse, ApiSuccessResponse } from "../common/decorators/api-response.decorator";
 import type { Profile } from "../generated/prisma/client";
 import { DashboardService } from "./dashboard.service";
 import { type DashboardSummary, DashboardSummaryDto } from "./dto/dashboard.dto";
@@ -14,13 +14,9 @@ export class DashboardController {
 
 	@Get("summary")
 	@ApiOperation({ summary: "Get dashboard summary" })
-	@ApiResponse({
-		status: 200,
-		type: ApiSuccessResponseDto<DashboardSummaryDto>,
-		description: "Aggregated dashboard summary",
-	})
-	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
-	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
+	@ApiSuccessResponse(200, DashboardSummaryDto, "Aggregated dashboard summary")
+	@ApiErrorResponse(401, "Unauthorized")
+	@ApiErrorResponse(500, "Internal server error")
 	getSummary(@CurrentUser() profile: Profile): Promise<DashboardSummary> {
 		return this.dashboardService.getSummary(profile);
 	}

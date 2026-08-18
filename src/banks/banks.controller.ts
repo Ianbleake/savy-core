@@ -1,11 +1,12 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import {
-	ApiErrorResponseDto,
-	ApiMessageResponseDto,
-	ApiSuccessResponseDto,
-} from "../common/dto/api-response.dto";
+	ApiArraySuccessResponse,
+	ApiErrorResponse,
+	ApiMessageResponse,
+	ApiSuccessResponse,
+} from "../common/decorators/api-response.decorator";
 import type { Profile } from "../generated/prisma/client";
 import { BanksService } from "./banks.service";
 import { BankResponseDto, CreateBankDto, QueryBanksDto, UpdateBankDto } from "./dto/bank.dto";
@@ -19,13 +20,9 @@ export class BanksController {
 
 	@Get()
 	@ApiOperation({ summary: "List all banks for the current user with optional filters" })
-	@ApiResponse({
-		status: 200,
-		description: "Returns array of banks",
-		type: ApiSuccessResponseDto<BankResponseDto>,
-	})
-	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
-	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
+	@ApiArraySuccessResponse(200, BankResponseDto, "Returns array of banks")
+	@ApiErrorResponse(401, "Unauthorized")
+	@ApiErrorResponse(500, "Internal server error")
 	async findAll(@CurrentUser() profile: Profile, @Query() query: QueryBanksDto) {
 		return this.banksService.findAllByProfile(profile.id, {
 			isActive: query.isActive === undefined ? undefined : query.isActive === "true",
@@ -36,15 +33,15 @@ export class BanksController {
 
 	@Get(":id/summary")
 	@ApiOperation({ summary: "Get bank financial summary" })
-	@ApiResponse({
-		status: 200,
-		description: "Returns the bank financial summary with KPIs, income/expenses, and loans",
-		type: ApiSuccessResponseDto<BankSummaryResponseDto>,
-	})
-	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
-	@ApiResponse({ status: 404, description: "Bank not found", type: ApiErrorResponseDto })
-	@ApiResponse({ status: 422, description: "Invalid period value", type: ApiErrorResponseDto })
-	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
+	@ApiSuccessResponse(
+		200,
+		BankSummaryResponseDto,
+		"Returns the bank financial summary with KPIs, income/expenses, and loans",
+	)
+	@ApiErrorResponse(401, "Unauthorized")
+	@ApiErrorResponse(404, "Bank not found")
+	@ApiErrorResponse(422, "Invalid period value")
+	@ApiErrorResponse(500, "Internal server error")
 	async getSummary(
 		@Param("id") id: string,
 		@Query() query: QueryBankSummaryDto,
@@ -55,52 +52,35 @@ export class BanksController {
 
 	@Get(":id")
 	@ApiOperation({ summary: "Get a single bank by ID with its accounts (control center view)" })
-	@ApiResponse({
-		status: 200,
-		description:
-			"Returns the bank with nested accounts (each including creditCard and loan). Typed as BankResponseDto — the actual payload includes the nested relations.",
-		type: ApiSuccessResponseDto<BankResponseDto>,
-	})
-	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
-	@ApiResponse({ status: 404, description: "Bank not found", type: ApiErrorResponseDto })
-	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
+	@ApiSuccessResponse(
+		200,
+		BankResponseDto,
+		"Returns the bank with nested accounts, credit cards, and loans",
+	)
+	@ApiErrorResponse(401, "Unauthorized")
+	@ApiErrorResponse(404, "Bank not found")
+	@ApiErrorResponse(500, "Internal server error")
 	async findOne(@Param("id") id: string, @CurrentUser() profile: Profile) {
 		return this.banksService.findOne(id, profile.id);
 	}
 
 	@Post()
 	@ApiOperation({ summary: "Create a new bank" })
-	@ApiResponse({
-		status: 201,
-		description: "Returns the created bank",
-		type: ApiSuccessResponseDto<BankResponseDto>,
-	})
-	@ApiResponse({
-		status: 400,
-		description: "Validation error or invalid request data",
-		type: ApiErrorResponseDto,
-	})
-	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
-	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
+	@ApiSuccessResponse(201, BankResponseDto, "Returns the created bank")
+	@ApiErrorResponse(400, "Validation error or invalid request data")
+	@ApiErrorResponse(401, "Unauthorized")
+	@ApiErrorResponse(500, "Internal server error")
 	async create(@CurrentUser() profile: Profile, @Body() dto: CreateBankDto) {
 		return this.banksService.create(profile.id, dto);
 	}
 
 	@Patch(":id")
 	@ApiOperation({ summary: "Update a bank by ID" })
-	@ApiResponse({
-		status: 200,
-		description: "Returns the updated bank",
-		type: ApiSuccessResponseDto<BankResponseDto>,
-	})
-	@ApiResponse({
-		status: 400,
-		description: "Validation error or invalid request data",
-		type: ApiErrorResponseDto,
-	})
-	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
-	@ApiResponse({ status: 404, description: "Bank not found", type: ApiErrorResponseDto })
-	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
+	@ApiSuccessResponse(200, BankResponseDto, "Returns the updated bank")
+	@ApiErrorResponse(400, "Validation error or invalid request data")
+	@ApiErrorResponse(401, "Unauthorized")
+	@ApiErrorResponse(404, "Bank not found")
+	@ApiErrorResponse(500, "Internal server error")
 	async update(
 		@Param("id") id: string,
 		@CurrentUser() profile: Profile,
@@ -111,10 +91,10 @@ export class BanksController {
 
 	@Delete(":id")
 	@ApiOperation({ summary: "Soft-delete a bank (deactivate)" })
-	@ApiResponse({ status: 200, description: "Bank deactivated", type: ApiMessageResponseDto })
-	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
-	@ApiResponse({ status: 404, description: "Bank not found", type: ApiErrorResponseDto })
-	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
+	@ApiMessageResponse(200, "Bank deactivated")
+	@ApiErrorResponse(401, "Unauthorized")
+	@ApiErrorResponse(404, "Bank not found")
+	@ApiErrorResponse(500, "Internal server error")
 	async remove(@Param("id") id: string, @CurrentUser() profile: Profile) {
 		await this.banksService.remove(id, profile.id);
 		return { message: "Bank deactivated" };
