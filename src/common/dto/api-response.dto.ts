@@ -23,7 +23,12 @@ export class ApiMessageResponseDto {
 	@ApiProperty({ example: true, description: "Whether the request succeeded" })
 	success!: boolean;
 
-	@ApiProperty({ example: null, description: "Always null for message-only responses" })
+	@ApiProperty({
+		example: null,
+		nullable: true,
+		type: String,
+		description: "Always null for message-only responses",
+	})
 	data!: null;
 
 	@ApiProperty({ example: "Account deactivated", description: "The action result message" })
@@ -38,7 +43,12 @@ export class ApiErrorResponseDto {
 	@ApiProperty({ example: false, description: "Whether the request succeeded" })
 	success!: boolean;
 
-	@ApiProperty({ example: null, description: "Always null on error" })
+	@ApiProperty({
+		example: null,
+		nullable: true,
+		type: String,
+		description: "Always null on error",
+	})
 	data!: null;
 
 	@ApiProperty({

@@ -1,2 +1,14 @@
 export PATH="/Users/dev-014/.bun/bin:$PATH"
+
+# Run Biome formatting via lint-staged
 bunx lint-staged
+
+# Verify the project compiles — blocks commits that would break the deploy
+echo "Running build check..."
+bun run build
+if [ $? -ne 0 ]; then
+	echo "Build failed. Commit aborted — fix the errors before committing."
+	exit 1
+fi
+
+echo "Build passed. Commit allowed."
