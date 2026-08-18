@@ -1,6 +1,11 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
+import {
+	ApiErrorResponseDto,
+	ApiMessageResponseDto,
+	ApiSuccessResponseDto,
+} from "../common/dto/api-response.dto";
 import type { Profile } from "../generated/prisma/client";
 import {
 	BulkCreateResponseDto,
@@ -22,8 +27,10 @@ export class IncomeSourcesController {
 	@ApiResponse({
 		status: 200,
 		description: "Returns array of income sources",
-		type: [IncomeSourceResponseDto],
+		type: ApiSuccessResponseDto<IncomeSourceResponseDto>,
 	})
+	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
 	async findAll(@CurrentUser() profile: Profile, @Query() query: QueryIncomeSourcesDto) {
 		return this.incomeSourcesService.findAllByProfile(profile.id, {
 			isActive: query.isActive === undefined ? undefined : query.isActive === "true",
@@ -37,9 +44,11 @@ export class IncomeSourcesController {
 	@ApiResponse({
 		status: 200,
 		description: "Returns the income source",
-		type: IncomeSourceResponseDto,
+		type: ApiSuccessResponseDto<IncomeSourceResponseDto>,
 	})
-	@ApiResponse({ status: 404, description: "Income source not found" })
+	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 404, description: "Income source not found", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
 	async findOne(@Param("id") id: string, @CurrentUser() profile: Profile) {
 		return this.incomeSourcesService.findOne(id, profile.id);
 	}
@@ -49,8 +58,15 @@ export class IncomeSourcesController {
 	@ApiResponse({
 		status: 201,
 		description: "Returns the created income source",
-		type: IncomeSourceResponseDto,
+		type: ApiSuccessResponseDto<IncomeSourceResponseDto>,
 	})
+	@ApiResponse({
+		status: 400,
+		description: "Validation error or invalid request data",
+		type: ApiErrorResponseDto,
+	})
+	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
 	async create(@CurrentUser() profile: Profile, @Body() dto: CreateIncomeSourceDto) {
 		return this.incomeSourcesService.create(profile.id, dto);
 	}
@@ -63,8 +79,10 @@ export class IncomeSourcesController {
 		status: 201,
 		description:
 			"Returns successful items, failed items with errors, total count, and creationState",
-		type: BulkCreateResponseDto,
+		type: ApiSuccessResponseDto<BulkCreateResponseDto>,
 	})
+	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
 	async bulkCreate(@CurrentUser() profile: Profile, @Body() body: { sources?: unknown[] }) {
 		const sources = Array.isArray(body?.sources) ? body.sources : [];
 		return this.incomeSourcesService.bulkCreate(profile.id, sources as Record<string, unknown>[]);
@@ -75,9 +93,16 @@ export class IncomeSourcesController {
 	@ApiResponse({
 		status: 200,
 		description: "Returns the updated income source",
-		type: IncomeSourceResponseDto,
+		type: ApiSuccessResponseDto<IncomeSourceResponseDto>,
 	})
-	@ApiResponse({ status: 404, description: "Income source not found" })
+	@ApiResponse({
+		status: 400,
+		description: "Validation error or invalid request data",
+		type: ApiErrorResponseDto,
+	})
+	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 404, description: "Income source not found", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
 	async update(
 		@Param("id") id: string,
 		@CurrentUser() profile: Profile,
@@ -88,8 +113,14 @@ export class IncomeSourcesController {
 
 	@Delete(":id")
 	@ApiOperation({ summary: "Soft-delete an income source (deactivate)" })
-	@ApiResponse({ status: 200, description: "Income source deactivated" })
-	@ApiResponse({ status: 404, description: "Income source not found" })
+	@ApiResponse({
+		status: 200,
+		description: "Income source deactivated",
+		type: ApiMessageResponseDto,
+	})
+	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 404, description: "Income source not found", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
 	async remove(@Param("id") id: string, @CurrentUser() profile: Profile) {
 		await this.incomeSourcesService.remove(id, profile.id);
 		return { message: "Income source deactivated" };

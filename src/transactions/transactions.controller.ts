@@ -1,6 +1,11 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
+import {
+	ApiErrorResponseDto,
+	ApiMessageResponseDto,
+	ApiSuccessResponseDto,
+} from "../common/dto/api-response.dto";
 import { PaginatedResponseDto } from "../common/dto/pagination.dto";
 import type { Profile } from "../generated/prisma/client";
 import {
@@ -55,8 +60,10 @@ export class TransactionsController {
 	@ApiResponse({
 		status: 200,
 		description: "Returns paginated transactions",
-		type: PaginatedResponseDto<TransactionResponseDto>,
+		type: ApiSuccessResponseDto<PaginatedResponseDto<TransactionResponseDto>>,
 	})
+	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
 	async findAll(@CurrentUser() profile: Profile, @Query() query: QueryTransactionsDto) {
 		return this.transactionsService.findAllByProfile(profile.id, {
 			accountId: query.accountId,
@@ -78,9 +85,11 @@ export class TransactionsController {
 	@ApiResponse({
 		status: 200,
 		description: "Returns the transaction",
-		type: TransactionResponseDto,
+		type: ApiSuccessResponseDto<TransactionResponseDto>,
 	})
-	@ApiResponse({ status: 404, description: "Transaction not found" })
+	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 404, description: "Transaction not found", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
 	async findOne(@Param("id") id: string, @CurrentUser() profile: Profile) {
 		return this.transactionsService.findOne(id, profile.id);
 	}
@@ -90,13 +99,21 @@ export class TransactionsController {
 	@ApiResponse({
 		status: 201,
 		description: "Returns the created transaction",
-		type: TransactionResponseDto,
+		type: ApiSuccessResponseDto<TransactionResponseDto>,
 	})
 	@ApiResponse({
 		status: 400,
-		description: "Invalid transaction rules (destination account, category type mismatch)",
+		description:
+			"Validation error or invalid transaction rules (destination account, category type mismatch)",
+		type: ApiErrorResponseDto,
 	})
-	@ApiResponse({ status: 404, description: "Account or category not found" })
+	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
+	@ApiResponse({
+		status: 404,
+		description: "Account or category not found",
+		type: ApiErrorResponseDto,
+	})
+	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
 	async create(@CurrentUser() profile: Profile, @Body() dto: CreateTransactionDto) {
 		return this.transactionsService.create(profile.id, dto);
 	}
@@ -106,9 +123,16 @@ export class TransactionsController {
 	@ApiResponse({
 		status: 200,
 		description: "Returns the updated transaction",
-		type: TransactionResponseDto,
+		type: ApiSuccessResponseDto<TransactionResponseDto>,
 	})
-	@ApiResponse({ status: 404, description: "Transaction not found" })
+	@ApiResponse({
+		status: 400,
+		description: "Validation error or invalid request data",
+		type: ApiErrorResponseDto,
+	})
+	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 404, description: "Transaction not found", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
 	async update(
 		@Param("id") id: string,
 		@CurrentUser() profile: Profile,
@@ -119,8 +143,10 @@ export class TransactionsController {
 
 	@Delete(":id")
 	@ApiOperation({ summary: "Delete a transaction (reverses balance effect)" })
-	@ApiResponse({ status: 200, description: "Transaction deleted" })
-	@ApiResponse({ status: 404, description: "Transaction not found" })
+	@ApiResponse({ status: 200, description: "Transaction deleted", type: ApiMessageResponseDto })
+	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 404, description: "Transaction not found", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
 	async remove(@Param("id") id: string, @CurrentUser() profile: Profile) {
 		await this.transactionsService.remove(id, profile.id);
 		return { message: "Transaction deleted" };

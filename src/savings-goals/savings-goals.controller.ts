@@ -1,6 +1,11 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
+import {
+	ApiErrorResponseDto,
+	ApiMessageResponseDto,
+	ApiSuccessResponseDto,
+} from "../common/dto/api-response.dto";
 import type { Profile } from "../generated/prisma/client";
 import {
 	CreateSavingsGoalDto,
@@ -21,8 +26,10 @@ export class SavingsGoalsController {
 	@ApiResponse({
 		status: 200,
 		description: "Returns array of savings goals with computed progress",
-		type: [SavingsGoalResponseDto],
+		type: ApiSuccessResponseDto<SavingsGoalResponseDto>,
 	})
+	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
 	async findAll(@CurrentUser() profile: Profile, @Query() query: QuerySavingsGoalsDto) {
 		return this.savingsGoalsService.findAllByProfile(profile.id, {
 			isCompleted: query.isCompleted === undefined ? undefined : query.isCompleted === "true",
@@ -36,9 +43,11 @@ export class SavingsGoalsController {
 	@ApiResponse({
 		status: 200,
 		description: "Returns the savings goal with computed progress",
-		type: SavingsGoalResponseDto,
+		type: ApiSuccessResponseDto<SavingsGoalResponseDto>,
 	})
-	@ApiResponse({ status: 404, description: "Savings goal not found" })
+	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 404, description: "Savings goal not found", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
 	async findOne(@Param("id") id: string, @CurrentUser() profile: Profile) {
 		return this.savingsGoalsService.findOne(id, profile.id);
 	}
@@ -48,10 +57,16 @@ export class SavingsGoalsController {
 	@ApiResponse({
 		status: 201,
 		description: "Returns the created savings goal",
-		type: SavingsGoalResponseDto,
+		type: ApiSuccessResponseDto<SavingsGoalResponseDto>,
 	})
-	@ApiResponse({ status: 400, description: "Account must be DEBIT or CASH" })
-	@ApiResponse({ status: 404, description: "Account not found" })
+	@ApiResponse({
+		status: 400,
+		description: "Validation error or account must be DEBIT or CASH",
+		type: ApiErrorResponseDto,
+	})
+	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 404, description: "Account not found", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
 	async create(@CurrentUser() profile: Profile, @Body() dto: CreateSavingsGoalDto) {
 		return this.savingsGoalsService.create(profile.id, dto);
 	}
@@ -61,9 +76,16 @@ export class SavingsGoalsController {
 	@ApiResponse({
 		status: 200,
 		description: "Returns the updated savings goal",
-		type: SavingsGoalResponseDto,
+		type: ApiSuccessResponseDto<SavingsGoalResponseDto>,
 	})
-	@ApiResponse({ status: 404, description: "Savings goal not found" })
+	@ApiResponse({
+		status: 400,
+		description: "Validation error or invalid request data",
+		type: ApiErrorResponseDto,
+	})
+	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 404, description: "Savings goal not found", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
 	async update(
 		@Param("id") id: string,
 		@CurrentUser() profile: Profile,
@@ -74,8 +96,10 @@ export class SavingsGoalsController {
 
 	@Delete(":id")
 	@ApiOperation({ summary: "Delete a savings goal (account and balance are not affected)" })
-	@ApiResponse({ status: 200, description: "Savings goal deleted" })
-	@ApiResponse({ status: 404, description: "Savings goal not found" })
+	@ApiResponse({ status: 200, description: "Savings goal deleted", type: ApiMessageResponseDto })
+	@ApiResponse({ status: 401, description: "Unauthorized", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 404, description: "Savings goal not found", type: ApiErrorResponseDto })
+	@ApiResponse({ status: 500, description: "Internal server error", type: ApiErrorResponseDto })
 	async remove(@Param("id") id: string, @CurrentUser() profile: Profile) {
 		await this.savingsGoalsService.remove(id, profile.id);
 		return { message: "Savings goal deleted" };
