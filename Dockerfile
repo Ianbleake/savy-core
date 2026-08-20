@@ -3,7 +3,7 @@
 # ============================================================================
 # Stage 1 — deps: install all deps + generate Prisma client
 # ============================================================================
-FROM oven/bun:1.1 AS deps
+FROM oven/bun:1.2 AS deps
 
 WORKDIR /app
 
