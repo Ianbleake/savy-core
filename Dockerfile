@@ -1,21 +1,29 @@
 # syntax=docker/dockerfile:1
 
 # ============================================================================
-# Stage 1 — deps: install all deps + generate Prisma client
+# Stage 1 — deps: install all deps with bun (fast, no postinstall)
 # ============================================================================
-FROM oven/bun:1.2 AS deps
+FROM node:22-slim AS deps
 
 WORKDIR /app
+
+# Install bun for fast install, openssl for Prisma engine
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl ca-certificates openssl && \
+    curl -fsSL https://bun.sh/install | bash && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+ENV PATH="/root/.bun/bin:$PATH"
 
 # Copy lockfile + manifest first for layer cache
 COPY package.json bun.lock ./
 COPY prisma ./prisma
 
-# postinstall script runs `prisma generate` (needs prisma/schema.prisma)
-RUN bun install --frozen-lockfile
+# Install dependencies (frozen lockfile, ignore postinstall scripts
+# to avoid Bun generating an ESM-flavoured Prisma client)
+RUN bun install --frozen-lockfile --ignore-scripts
 
 # ============================================================================
-# Stage 2 — build: compile TypeScript -> dist/
+# Stage 2 — build: generate Prisma client with Node, then compile TS
 # ============================================================================
 FROM deps AS build
 
@@ -23,12 +31,15 @@ WORKDIR /app
 
 COPY . .
 
-# nest build compiles src/ -> dist/.
-# Prisma client (src/generated/prisma/) gets compiled into dist/generated/prisma/
+# Generate Prisma client using the Node-compatible prisma binary
+# (Bun's prisma generate produces ESM with import.meta; Node's produces CJS)
+RUN ./node_modules/.bin/prisma generate
+
+# Compile TypeScript -> dist/
 RUN bun run build
 
 # Prune devDependencies for the production image
-RUN bun install --frozen-lockfile --production
+RUN bun install --frozen-lockfile --production --ignore-scripts
 
 # ============================================================================
 # Stage 3 — runtime: slim Node image
@@ -41,7 +52,6 @@ ENV NODE_ENV=production
 ENV PORT=3001
 
 # Install openssl (Prisma engine needs it) + wget for healthcheck
-# hadolint ignore=DL3008
 RUN apt-get update && \
     apt-get install -y --no-install-recommends openssl wget ca-certificates && \
     rm -rf /var/lib/apt/lists/*
