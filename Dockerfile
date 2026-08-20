@@ -9,7 +9,7 @@ WORKDIR /app
 
 # Install bun for fast install, openssl for Prisma engine
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl ca-certificates openssl && \
+    apt-get install -y --no-install-recommends curl ca-certificates openssl unzip && \
     curl -fsSL https://bun.sh/install | bash && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 ENV PATH="/root/.bun/bin:$PATH"
